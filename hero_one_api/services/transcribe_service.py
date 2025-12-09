@@ -7,6 +7,185 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 
 class TranscribeService:
+    # Style templates with hook styles
+    STYLE_TEMPLATES = {
+        'professional': {
+            'name': 'Professional Business',
+            'prompt_modifier': 'Write in a professional, corporate tone. Use formal language, focus on business value, and maintain a polished, executive-level communication style.',
+            'caption_style': 'Professional and authoritative with industry-relevant terminology',
+            'description_style': 'Detailed business analysis with key insights and actionable takeaways',
+            'hook_style': 'Authority-based hook that establishes credibility and business value'
+        },
+        'casual': {
+            'name': 'Casual & Friendly', 
+            'prompt_modifier': 'Write in a casual, conversational tone. Use everyday language, be relatable and approachable, like talking to a friend.',
+            'caption_style': 'Friendly and conversational with emojis and casual language',
+            'description_style': 'Easy-to-read explanation in a warm, personal tone',
+            'hook_style': 'Relatable hook that feels like a conversation with a friend'
+        },
+        'educational': {
+            'name': 'Educational & Informative',
+            'prompt_modifier': 'Write in an educational, teaching tone. Break down complex concepts, provide clear explanations, and focus on learning outcomes.',
+            'caption_style': 'Clear and informative with focus on learning and knowledge sharing',
+            'description_style': 'Structured educational content with key learning points and takeaways',
+            'hook_style': 'Knowledge-based hook that promises learning and insights'
+        },
+        'entertaining': {
+            'name': 'Fun & Entertaining',
+            'prompt_modifier': 'Write in a fun, energetic, and entertaining tone. Use humor, excitement, and engaging language to capture attention and entertain the audience.',
+            'caption_style': 'Exciting and fun with humor, energy, and entertainment value',
+            'description_style': 'Engaging narrative that entertains while informing',
+            'hook_style': 'Entertainment hook with humor, surprise, or excitement to grab attention'
+        },
+        'inspirational': {
+            'name': 'Motivational & Inspiring',
+            'prompt_modifier': 'Write in an inspirational, motivational tone. Focus on empowerment, positive messaging, and encouraging action. Use uplifting language.',
+            'caption_style': 'Motivational and uplifting with call-to-action elements',
+            'description_style': 'Inspiring content that motivates and empowers the audience',
+            'hook_style': 'Inspirational hook that motivates and creates desire for transformation'
+        },
+        'technical': {
+            'name': 'Technical & Expert',
+            'prompt_modifier': 'Write in a technical, expert tone. Use industry terminology, focus on specifications, detailed analysis, and expert-level insights.',
+            'caption_style': 'Technical and precise with expert terminology and insights',
+            'description_style': 'Detailed technical analysis with specifications and expert perspectives',
+            'hook_style': 'Expert-level hook that demonstrates technical mastery and insider knowledge'
+        },
+        'storytelling': {
+            'name': 'Narrative & Storytelling',
+            'prompt_modifier': 'Write in a storytelling tone. Create narrative flow, use story elements, emotional connections, and paint vivid pictures with words.',
+            'caption_style': 'Story-driven with narrative hooks and emotional connection',
+            'description_style': 'Compelling narrative that tells a complete story',
+            'hook_style': 'Narrative hook that creates curiosity and emotional connection through storytelling'
+        },
+        'minimalist': {
+            'name': 'Clean & Minimalist',
+            'prompt_modifier': 'Write in a clean, minimalist tone. Be concise, direct, and to-the-point. Focus on essential information without unnecessary elaboration.',
+            'caption_style': 'Clean and concise with essential information only',
+            'description_style': 'Minimal but complete explanation focusing on key points',
+            'hook_style': 'Direct, impactful hook that gets straight to the point without fluff'
+        },
+        'viral': {
+            'name': 'Viral & Trending',
+            'prompt_modifier': 'Write in a viral, trending style. Use current internet language, memes, trending phrases, and create content designed to be shared widely.',
+            'caption_style': 'Viral-optimized with trending language and shareability focus',
+            'description_style': 'Engaging content designed for maximum reach and viral potential',
+            'hook_style': 'Viral hook using trending formats, curiosity gaps, and shareable elements'
+        },
+        'luxury': {
+            'name': 'Luxury & Premium',
+            'prompt_modifier': 'Write in a luxury, premium tone. Use sophisticated language, focus on exclusivity, quality, and high-end appeal.',
+            'caption_style': 'Sophisticated and premium with luxury positioning',
+            'description_style': 'Elegant content that emphasizes quality and exclusivity',
+            'hook_style': 'Exclusive hook that creates desire through premium positioning and scarcity'
+        }
+    }
+    
+    @staticmethod
+    def get_available_styles():
+        """Get list of available style options"""
+        return {
+            style_key: {
+                'name': style_data['name'],
+                'description': style_data['prompt_modifier']
+            }
+            for style_key, style_data in TranscribeService.STYLE_TEMPLATES.items()
+        }
+    
+    @staticmethod
+    def parse_openai_response(content: str) -> dict:
+        """
+        Parse OpenAI response to extract caption, description, and hashtags
+        
+        Args:
+            content: Raw OpenAI response content
+            
+        Returns:
+            Dict with caption, description, hashtags
+        """
+        logger.info(f"OpenAI raw response: {content}")
+        
+        caption = ""
+        description = ""
+        hashtags = ""
+        
+        try:
+            # More robust parsing that handles various formats
+            lines = content.split('\n')
+            current_section = None
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Check for section headers (case insensitive)
+                if line.upper().startswith('CAPTION:'):
+                    current_section = 'caption'
+                    # Extract content after CAPTION:
+                    caption_content = line[8:].strip()  # Remove "CAPTION:"
+                    if caption_content:
+                        caption = caption_content
+                    continue
+                elif line.upper().startswith('DESCRIPTION:'):
+                    current_section = 'description'
+                    # Extract content after DESCRIPTION:
+                    desc_content = line[12:].strip()  # Remove "DESCRIPTION:"
+                    if desc_content:
+                        description = desc_content
+                    continue
+                elif line.upper().startswith('HASHTAGS:'):
+                    current_section = 'hashtags'
+                    # Extract content after HASHTAGS:
+                    hashtag_content = line[9:].strip()  # Remove "HASHTAGS:"
+                    if hashtag_content:
+                        hashtags = hashtag_content
+                    continue
+                
+                # Add content to current section
+                if current_section and line:
+                    if current_section == 'caption':
+                        caption = caption + " " + line if caption else line
+                    elif current_section == 'description':
+                        description = description + " " + line if description else line
+                    elif current_section == 'hashtags':
+                        hashtags = hashtags + " " + line if hashtags else line
+            
+            # Fallback: try old method if new method didn't work
+            if not caption and not description and not hashtags:
+                if "CAPTION:" in content:
+                    try:
+                        caption_part = content.split("CAPTION:")[1].split("DESCRIPTION:")[0].strip()
+                        caption = caption_part
+                    except:
+                        pass
+                
+                if "DESCRIPTION:" in content:
+                    try:
+                        desc_part = content.split("DESCRIPTION:")[1].split("HASHTAGS:")[0].strip()
+                        description = desc_part
+                    except:
+                        pass
+                
+                if "HASHTAGS:" in content:
+                    try:
+                        hashtags_part = content.split("HASHTAGS:")[1].strip()
+                        hashtags = hashtags_part
+                    except:
+                        pass
+            
+            # Final fallback: use entire content as caption if nothing parsed
+            if not caption and not description and not hashtags:
+                caption = content.strip()
+                
+        except Exception as parse_error:
+            logger.error(f"Parsing error: {parse_error}, using fallback")
+            caption = content.strip()  # Use entire response as caption
+        
+        return {
+            "caption": caption,
+            "description": description,
+            "hashtags": hashtags
+        }
+    
     @staticmethod
     def format_srt_timestamp(seconds: float) -> str:
         """
@@ -103,7 +282,9 @@ class TranscribeService:
         language: Optional[str] = None,
         caption_length: str = 'medium',
         description_length: str = 'medium',
-        hashtag_count: int = 15
+        hashtag_count: int = 15,
+        style: str = 'casual',
+        custom_prompt: Optional[str] = None
     ) -> dict:
         """
         Generate social media content (caption, description, hashtags) from audio/video
@@ -115,6 +296,8 @@ class TranscribeService:
             caption_length: 'short' (1 sentence), 'medium' (2 sentences), 'long' (3 sentences)
             description_length: 'short' (1 paragraph), 'medium' (2-3 paragraphs), 'long' (4-5 paragraphs)
             hashtag_count: Number of hashtags to generate (5-30, default: 15)
+            style: Writing style ('professional', 'casual', 'educational', 'viral', 'luxury', etc.)
+            custom_prompt: Additional custom instructions (optional, independent of style)
             
         Returns:
             Dict with caption, description, hashtags for Instagram, Facebook, YouTube
@@ -149,24 +332,34 @@ class TranscribeService:
             # Validate and set hashtag count
             hashtag_count = max(5, min(30, hashtag_count))  # Ensure between 5 and 30
             
-            # Create prompt for social media content generation
+            # Get style configuration
+            style_config = TranscribeService.STYLE_TEMPLATES.get(style, TranscribeService.STYLE_TEMPLATES['casual'])
+            
+            # Prepare combined prompt instructions
+            combined_instructions = style_config['prompt_modifier']
+            if custom_prompt:
+                combined_instructions += f" ADDITIONAL CUSTOM INSTRUCTIONS: {custom_prompt}"
+            
+            # Create prompt for social media content generation with style
             prompt = f"""Based on this video transcription, generate social media content for Instagram, Facebook, and YouTube:
 
                 Transcription:
                 {transcription}
 
+                STYLE INSTRUCTIONS: {combined_instructions}
+
                 Please provide:
-                1. A hook-style caption ({caption_req}, written like a hook that grabs attention and creates curiosity. Use attention-grabbing phrases, emojis, and make people want to watch)
-                2. A detailed description ({description_req} explaining the video content)
+                1. A caption ({caption_req}) - {style_config['caption_style']} with {style_config['hook_style']}
+                2. A detailed description ({description_req}) - {style_config['description_style']}
                 3. Exactly {hashtag_count} trending hashtags relevant to the content
 
                 Format the response as:
 
                 CAPTION:
-                [Your hook-style attention-grabbing caption here with emojis]
+                [Your styled caption here following the style instructions]
 
                 DESCRIPTION:
-                [Your detailed description here]
+                [Your styled description here following the style instructions]
 
                 HASHTAGS:
                 [Your hashtags separated by spaces, like: #trending #video #content]
@@ -176,52 +369,16 @@ class TranscribeService:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a social media expert who creates engaging captions, descriptions, and trending hashtags for video content. Make content suitable for Instagram, Facebook, and YouTube."},
+                    {"role": "system", "content": f"You are a social media expert who creates engaging captions, descriptions, and trending hashtags for video content. You adapt your writing style based on specific instructions to match different tones and audiences. Make content suitable for Instagram, Facebook, and YouTube. Current style: {combined_instructions}"},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
                 max_tokens=1000
             )
             
-            # Parse the response
+            # Parse the response using the improved parser
             content = response.choices[0].message.content
-            
-            # Extract caption, description, and hashtags
-            caption = ""
-            description = ""
-            hashtags = ""
-            
-            if "CAPTION:" in content:
-                caption_part = content.split("CAPTION:")[1].split("DESCRIPTION:")[0].strip()
-                caption = caption_part
-            
-            if "DESCRIPTION:" in content:
-                desc_part = content.split("DESCRIPTION:")[1].split("HASHTAGS:")[0].strip()
-                description = desc_part
-            
-            if "HASHTAGS:" in content:
-                hashtags_part = content.split("HASHTAGS:")[1].strip()
-                hashtags = hashtags_part
-            
-            result = {
-                "transcription": transcription,
-                "caption": caption,
-                "description": description,
-                "hashtags": hashtags,
-                "instagram": {
-                    "caption": f"{caption}\n\n{hashtags}",
-                    "description": description
-                },
-                "facebook": {
-                    "caption": caption,
-                    "description": f"{description}\n\n{hashtags}"
-                },
-                "youtube": {
-                    "title": caption,
-                    "description": f"{description}\n\n{hashtags}",
-                    "tags": [tag.strip().replace('#', '') for tag in hashtags.split() if tag.startswith('#')]
-                }
-            }
+            result = TranscribeService.parse_openai_response(content)
             
             logger.info(f"Social media content generated for: {audio_file_path}")
             return result
@@ -235,7 +392,9 @@ class TranscribeService:
         image_file_path: str,
         caption_length: str = 'medium',
         description_length: str = 'medium',
-        hashtag_count: int = 15
+        hashtag_count: int = 15,
+        style: str = 'casual',
+        custom_prompt: Optional[str] = None
     ) -> dict:
         """
         Generate social media content (caption, description, hashtags) from an image
@@ -246,6 +405,8 @@ class TranscribeService:
             caption_length: 'short' (1 sentence), 'medium' (2 sentences), 'long' (3 sentences)
             description_length: 'short' (1 paragraph), 'medium' (2-3 paragraphs), 'long' (4-5 paragraphs)
             hashtag_count: Number of hashtags to generate (5-30, default: 15)
+            style: Writing style ('professional', 'casual', 'educational', 'viral', 'luxury', etc.)
+            custom_prompt: Additional custom instructions (optional, independent of style)
             
         Returns:
             Dict with caption, description, hashtags for Instagram, Facebook, YouTube
@@ -297,21 +458,31 @@ class TranscribeService:
             # Validate and set hashtag count
             hashtag_count = max(5, min(30, hashtag_count))  # Ensure between 5 and 30
             
-            # Create prompt for social media content generation
+            # Get style configuration
+            style_config = TranscribeService.STYLE_TEMPLATES.get(style, TranscribeService.STYLE_TEMPLATES['casual'])
+            
+            # Prepare combined prompt instructions
+            combined_instructions = style_config['prompt_modifier']
+            if custom_prompt:
+                combined_instructions += f" ADDITIONAL CUSTOM INSTRUCTIONS: {custom_prompt}"
+            
+            # Create prompt for social media content generation with style
             prompt = f"""Analyze this image and generate engaging social media content for Instagram, Facebook, and YouTube.
 
+                STYLE INSTRUCTIONS: {combined_instructions}
+
                 Please provide:
-                1. A hook-style caption ({caption_req}, written like a hook that grabs attention and creates curiosity. Use attention-grabbing phrases, emojis, and make people want to see more)
-                2. A detailed description ({description_req} explaining what's in the image and why it's interesting or valuable)
+                1. A caption ({caption_req}) - {style_config['caption_style']} with {style_config['hook_style']}
+                2. A detailed description ({description_req}) - {style_config['description_style']}
                 3. Exactly {hashtag_count} trending hashtags relevant to the image content
 
                 Format the response as:
 
                 CAPTION:
-                [Your hook-style attention-grabbing caption here with emojis]
+                [Your styled caption here following the style instructions]
 
                 DESCRIPTION:
-                [Your detailed description here]
+                [Your styled description here following the style instructions]
 
                 HASHTAGS:
                 [Your hashtags separated by spaces, like: #trending #photography #art]
@@ -323,7 +494,7 @@ class TranscribeService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a social media expert who creates engaging captions, descriptions, and trending hashtags for image content. Analyze images carefully and create content that is suitable for Instagram, Facebook, and YouTube. Make captions attention-grabbing with emojis."
+                        "content": f"You are a social media expert who creates engaging captions, descriptions, and trending hashtags for image content. You adapt your writing style based on specific instructions to match different tones and audiences. Analyze images carefully and create content that is suitable for Instagram, Facebook, and YouTube. Current style: {combined_instructions}"
                     },
                     {
                         "role": "user",
@@ -345,45 +516,9 @@ class TranscribeService:
                 max_tokens=1000
             )
             
-            # Parse the response
+            # Parse the response using the improved parser
             content = response.choices[0].message.content
-            
-            # Extract caption, description, and hashtags
-            caption = ""
-            description = ""
-            hashtags = ""
-            
-            if "CAPTION:" in content:
-                caption_part = content.split("CAPTION:")[1].split("DESCRIPTION:")[0].strip()
-                caption = caption_part
-            
-            if "DESCRIPTION:" in content:
-                desc_part = content.split("DESCRIPTION:")[1].split("HASHTAGS:")[0].strip()
-                description = desc_part
-            
-            if "HASHTAGS:" in content:
-                hashtags_part = content.split("HASHTAGS:")[1].strip()
-                hashtags = hashtags_part
-            
-            result = {
-                "transcription": "",
-                "caption": caption,
-                "description": description,
-                "hashtags": hashtags,
-                "instagram": {
-                    "caption": f"{caption}\n\n{hashtags}",
-                    "description": description
-                },
-                "facebook": {
-                    "caption": caption,
-                    "description": f"{description}\n\n{hashtags}"
-                },
-                "youtube": {
-                    "title": caption,
-                    "description": f"{description}\n\n{hashtags}",
-                    "tags": [tag.strip().replace('#', '') for tag in hashtags.split() if tag.startswith('#')]
-                }
-            }
+            result = TranscribeService.parse_openai_response(content)
             
             logger.info(f"Social media content generated from image: {image_file_path}")
             return result

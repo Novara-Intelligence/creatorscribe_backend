@@ -589,6 +589,8 @@ class JobAdmin(admin.ModelAdmin):
         'user_email',
         'file_type',
         'original_filename',
+        'style_display',
+        'custom_prompt_display',
         'status_display',
         'progress_display',
         'created_at',
@@ -600,6 +602,7 @@ class JobAdmin(admin.ModelAdmin):
     list_filter = (
         'status',
         'file_type',
+        'style',
         'created_at',
         'user__subscription_type'
     )
@@ -661,7 +664,9 @@ class JobAdmin(admin.ModelAdmin):
             'fields': (
                 'caption_length',
                 'description_length',
-                'hashtag_count'
+                'hashtag_count',
+                'style',
+                'custom_prompt'
             )
         }),
         (_('Results'), {
@@ -698,6 +703,33 @@ class JobAdmin(admin.ModelAdmin):
         return obj.user.email
     user_email.short_description = 'User'
     user_email.admin_order_field = 'user__email'
+    
+    def style_display(self, obj):
+        """Display style with icon"""
+        style_icons = {
+            'professional': '💼',
+            'casual': '😊',
+            'educational': '📚',
+            'entertaining': '🎉',
+            'inspirational': '✨',
+            'technical': '⚙️',
+            'storytelling': '📖',
+            'minimalist': '🔲',
+            'viral': '🔥',
+            'luxury': '💎'
+        }
+        icon = style_icons.get(obj.style, '📝')
+        return f"{icon} {obj.style.title()}"
+    style_display.short_description = 'Style'
+    style_display.admin_order_field = 'style'
+    
+    def custom_prompt_display(self, obj):
+        """Display custom prompt preview"""
+        if obj.custom_prompt:
+            preview = obj.custom_prompt[:30] + '...' if len(obj.custom_prompt) > 30 else obj.custom_prompt
+            return f"📝 {preview}"
+        return "—"
+    custom_prompt_display.short_description = 'Custom Prompt'
     
     def status_display(self, obj):
         """Display status with color coding"""

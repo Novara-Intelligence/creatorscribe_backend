@@ -67,7 +67,9 @@ def process_content_generation_task(self, job_id: str):
                 image_file_path=file_path,
                 caption_length=job.caption_length,
                 description_length=job.description_length,
-                hashtag_count=job.hashtag_count
+                hashtag_count=job.hashtag_count,
+                style=job.style,
+                custom_prompt=job.custom_prompt
             )
             
             # Progress: 90% - Finalizing
@@ -110,7 +112,9 @@ def process_content_generation_task(self, job_id: str):
                 audio_file_path=audio_path_or_error,
                 caption_length=job.caption_length,
                 description_length=job.description_length,
-                hashtag_count=job.hashtag_count
+                hashtag_count=job.hashtag_count,
+                style=job.style,
+                custom_prompt=job.custom_prompt
             )
             
             # Progress: 90% - Finalizing
@@ -138,7 +142,9 @@ def process_content_generation_task(self, job_id: str):
                 audio_file_path=file_path,
                 caption_length=job.caption_length,
                 description_length=job.description_length,
-                hashtag_count=job.hashtag_count
+                hashtag_count=job.hashtag_count,
+                style=job.style,
+                custom_prompt=job.custom_prompt
             )
             
             # Progress: 90% - Finalizing

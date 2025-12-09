@@ -97,6 +97,16 @@ class Job(models.Model):
         default=15,
         help_text='Number of hashtags to generate'
     )
+    style = models.CharField(
+        max_length=20,
+        default='casual',
+        help_text='Writing style for content generation (professional, casual, educational, etc.)'
+    )
+    custom_prompt = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Custom style prompt (used when style=custom)'
+    )
     
     # Results
     result_data = models.JSONField(

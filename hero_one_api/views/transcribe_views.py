@@ -37,6 +37,21 @@ class AuthBearer(HttpBearer):
 transcribe_router = Router(tags=["Transcribe"])
 
 
+@transcribe_router.get("/styles", response={200: dict})
+def get_available_styles(request):
+    """
+    Get available writing styles for content generation
+    
+    Returns a list of available styles with descriptions
+    """
+    from hero_one_api.services.transcribe_service import TranscribeService
+    
+    return 200, {
+        "styles": TranscribeService.get_available_styles(),
+        "message": "Available writing styles for content generation"
+    }
+
+
 # Supported file extensions
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.flac', '.ogg', '.aac']
 VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm']
@@ -140,6 +155,8 @@ def upload_file_only(
             caption_length='medium',  # Defaults, can be changed when calling /generate
             description_length='medium',
             hashtag_count=15,
+            style='casual',  # Default style
+            custom_prompt=None,
         )
         
         logger.info(f"File uploaded, job created: {job.job_id} for user {user.email}")
@@ -164,9 +181,11 @@ def upload_file_only(
 def generate_content_from_upload(
     request,
     job_id: str,
-    caption_length: str = 'medium',
-    description_length: str = 'medium',
-    hashtag_count: int = 15
+    caption_length: str = Query('medium'),
+    description_length: str = Query('medium'),
+    hashtag_count: int = Query(15),
+    style: str = Query('casual'),
+    custom_prompt: Optional[str] = Query(None, min_length=0)
 ):
     """
     Step 2: Start content generation for an uploaded file
@@ -175,6 +194,8 @@ def generate_content_from_upload(
     - **caption_length**: 'short', 'medium', or 'long' (default: medium)
     - **description_length**: 'short', 'medium', or 'long' (default: medium)
     - **hashtag_count**: Number of hashtags (5-30, default: 15)
+    - **style**: Writing style - 'professional', 'casual', 'educational', 'entertaining', 'inspirational', 'technical', 'storytelling', 'minimalist', 'viral', or 'luxury' (default: casual)
+    - **custom_prompt**: Additional custom instructions (optional, works with any style)
     
     Returns job information with task_id to track progress
     """
@@ -215,7 +236,17 @@ def generate_content_from_upload(
         if description_length not in ['short', 'medium', 'long']:
             return 400, {"success": False, "message": "description_length must be 'short', 'medium', or 'long'"}
         
+        # Import TranscribeService to access style templates
+        from hero_one_api.services.transcribe_service import TranscribeService
+        valid_styles = list(TranscribeService.STYLE_TEMPLATES.keys())
+        if style not in valid_styles:
+            return 400, {"success": False, "message": f"style must be one of: {', '.join(valid_styles)}"}
+        
         hashtag_count = max(5, min(30, hashtag_count))
+        
+        # Handle empty custom_prompt (convert empty string to None)
+        if custom_prompt is not None and custom_prompt.strip() == '':
+            custom_prompt = None
         
         # Use credit
         success, message = user.use_credit(
@@ -230,8 +261,10 @@ def generate_content_from_upload(
         job.caption_length = caption_length
         job.description_length = description_length
         job.hashtag_count = hashtag_count
+        job.style = style
+        job.custom_prompt = custom_prompt
         job.status = 'pending'
-        job.save(update_fields=['caption_length', 'description_length', 'hashtag_count', 'status'])
+        job.save(update_fields=['caption_length', 'description_length', 'hashtag_count', 'style', 'custom_prompt', 'status'])
         
         logger.info(f"Starting content generation for job: {job.job_id}")
         
