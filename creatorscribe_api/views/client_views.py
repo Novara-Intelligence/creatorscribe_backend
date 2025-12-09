@@ -1,6 +1,6 @@
 from ninja import Router
 from ninja.security import HttpBearer
-from rest_framework_simplejwt.tokens import AccessToken
+from ninja_jwt.tokens import AccessToken
 from django.contrib.auth import get_user_model
 from ..models.client_models import Client
 from ..schemas import (

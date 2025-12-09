@@ -1,5 +1,5 @@
 """
-URL configuration for hero_one project.
+URL configuration for creatorscribe project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -18,15 +18,15 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from hero_one_api.views import auth_api
+from creatorscribe_api.views import auth_api
 from ninja import NinjaAPI
 
 # Create main API instance
 api = NinjaAPI(title="CreatorScribe API", version="1.0.0")
 
 # Import and add routers
-from hero_one_api.views.client_views import client_router
-from hero_one_api.views.transcribe_views import transcribe_router
+from creatorscribe_api.views.client_views import client_router
+from creatorscribe_api.views.transcribe_views import transcribe_router
 
 api.add_router("/clients", client_router)
 api.add_router("/transcribe", transcribe_router)

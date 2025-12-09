@@ -7,17 +7,17 @@ from pathlib import Path
 from ninja import Router, File, Query
 from ninja.files import UploadedFile
 from ninja.security import HttpBearer
-from rest_framework_simplejwt.tokens import AccessToken
+from ninja_jwt.tokens import AccessToken
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from typing import Optional
 
-from hero_one_api.models import Job, Client
-from hero_one_api.services.transcribe_service import TranscribeService
-from hero_one_api.services.audio_service import AudioService
-from hero_one_api.schemas import ErrorResponseSchema
-from hero_one_api.tasks import process_content_generation_task
+from creatorscribe_api.models import Job, Client
+from creatorscribe_api.services.transcribe_service import TranscribeService
+from creatorscribe_api.services.audio_service import AudioService
+from creatorscribe_api.schemas import ErrorResponseSchema
+from creatorscribe_api.tasks import process_content_generation_task
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def get_available_styles(request):
     
     Returns a list of available styles with descriptions
     """
-    from hero_one_api.services.transcribe_service import TranscribeService
+    from creatorscribe_api.services.transcribe_service import TranscribeService
     
     return 200, {
         "styles": TranscribeService.get_available_styles(),
@@ -237,7 +237,7 @@ def generate_content_from_upload(
             return 400, {"success": False, "message": "description_length must be 'short', 'medium', or 'long'"}
         
         # Import TranscribeService to access style templates
-        from hero_one_api.services.transcribe_service import TranscribeService
+        from creatorscribe_api.services.transcribe_service import TranscribeService
         valid_styles = list(TranscribeService.STYLE_TEMPLATES.keys())
         if style not in valid_styles:
             return 400, {"success": False, "message": f"style must be one of: {', '.join(valid_styles)}"}

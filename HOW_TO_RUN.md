@@ -46,10 +46,10 @@ python manage.py runserver
 OR manually:
 ```bash
 # macOS/Linux
-celery -A hero_one worker --loglevel=info
+celery -A creatorscribe worker --loglevel=info
 
 # Windows
-celery -A hero_one worker --loglevel=info --pool=solo
+celery -A creatorscribe worker --loglevel=info --pool=solo
 ```
 ✅ Keep this running - Background task processor
 
@@ -65,7 +65,7 @@ python test_background_processing.py
 
 ### Terminal 1 (Django)
 ```
-Django version 5.2.7, using settings 'hero_one.settings'
+Django version 5.2.7, using settings 'creatorscribe.settings'
 Starting development server at http://127.0.0.1:8000/
 Quit the server with CONTROL-C.
 ```
@@ -77,7 +77,7 @@ Quit the server with CONTROL-C.
 --- * ***  * -- Darwin-23.0.0-arm64-arm-64bit 2024-11-02 13:30:00
 -- * - **** --- 
 - ** ---------- [config]
-- ** ---------- .> app:         hero_one:0x104e3a4d0
+- ** ---------- .> app:         creatorscribe:0x104e3a4d0
 - ** ---------- .> transport:   redis://localhost:6379/0
 - ** ---------- .> results:     redis://localhost:6379/0
 - *** --- * --- .> concurrency: 8 (prefork)
@@ -87,7 +87,7 @@ Quit the server with CONTROL-C.
                 .> celery           exchange=celery(direct) key=celery
                 
 [tasks]
-  . hero_one_api.tasks.process_content_generation_task
+  . creatorscribe_api.tasks.process_content_generation_task
 
 [2024-11-02 13:30:00,000: INFO/MainProcess] Connected to redis://localhost:6379/0
 [2024-11-02 13:30:00,000: INFO/MainProcess] mingle: searching for neighbors
@@ -135,7 +135,7 @@ redis-cli ping
 
 ### 2. Check Celery Worker
 ```bash
-celery -A hero_one inspect active
+celery -A creatorscribe inspect active
 # Should show active tasks or empty list
 ```
 
@@ -179,7 +179,7 @@ pip install -r requirements.txt
 **Solution:**
 ```bash
 # Check if worker is running
-celery -A hero_one inspect active
+celery -A creatorscribe inspect active
 
 # Start worker
 ./start_celery.sh
@@ -287,7 +287,7 @@ curl http://localhost:8000/api/transcribe/job/123e4567-e89b-12d3-a456-4266141740
 4. **Flower** - Celery monitoring UI (optional)
    ```bash
    pip install flower
-   celery -A hero_one flower
+   celery -A creatorscribe flower
    # Visit http://localhost:5555
    ```
 ---

@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class HeroOneApiConfig(AppConfig):
+class CreatorscribeApiConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'hero_one_api'
+    name = 'creatorscribe_api'

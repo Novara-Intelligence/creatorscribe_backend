@@ -5,9 +5,9 @@ import os
 import logging
 from celery import shared_task
 from django.utils import timezone
-from hero_one_api.models import Job
-from hero_one_api.services.transcribe_service import TranscribeService
-from hero_one_api.services.audio_service import AudioService
+from creatorscribe_api.models import Job
+from creatorscribe_api.services.transcribe_service import TranscribeService
+from creatorscribe_api.services.audio_service import AudioService
 
 logger = logging.getLogger(__name__)
 

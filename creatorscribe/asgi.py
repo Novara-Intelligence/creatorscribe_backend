@@ -1,5 +1,5 @@
 """
-ASGI config for hero_one project.
+ASGI config for creatorscribe project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hero_one.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'creatorscribe.settings')
 
 application = get_asgi_application()

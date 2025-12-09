@@ -12,7 +12,7 @@ Usage:
 
 Prerequisites:
     - Redis running: redis-cli ping
-    - Celery worker running: celery -A hero_one worker --loglevel=info
+    - Celery worker running: celery -A creatorscribe worker --loglevel=info
     - Django server running: python manage.py runserver
 """
 
@@ -22,11 +22,11 @@ import django
 import time
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hero_one.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'creatorscribe.settings')
 django.setup()
 
-from hero_one_api.models import Job, Client, User
-from hero_one_api.tasks import process_content_generation_task
+from creatorscribe_api.models import Job, Client, User
+from creatorscribe_api.tasks import process_content_generation_task
 from django.utils import timezone
 
 

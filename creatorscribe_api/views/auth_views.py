@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
+from ninja_jwt.tokens import RefreshToken
 from ..schemas import (
     RegistrationRequestSchema,
     RegistrationResponseSchema,
