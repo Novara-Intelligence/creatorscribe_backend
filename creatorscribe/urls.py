@@ -26,15 +26,13 @@ api = NinjaAPI(title="CreatorScribe API", version="1.0.0")
 
 # Import and add routers
 from creatorscribe_api.views.client_views import client_router
-from creatorscribe_api.views.transcribe_views import transcribe_router
 
 api.add_router("/clients", client_router)
-api.add_router("/transcribe", transcribe_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/auth/', auth_api.urls),
-    path('api/', api.urls),
+    path('api/v1/', api.urls),
 ]
 
 

@@ -129,8 +129,7 @@ def verify_registration_otp(request, data: RegistrationVerificationRequestSchema
 
             client = Client.objects.create(
                 user=user,
-                contact_email=user.email,
-                industry_type='other'
+                client_name=user.username,
             )
             print("Client created:", client.id)
 
@@ -406,11 +405,7 @@ def oauth_signin(request, data: OAuthSigninRequestSchema):
                 # Create "Self as Client" automatically for new OAuth users
                 Client.objects.create(
                     user=user,
-                    client_name=user.full_name,
-                    contact_person=user.full_name,
-                    contact_email=user.email,
-                    contact_phone='',
-                    industry_type='other'
+                    client_name=user.username,
                 )
                 
                 # Update profile picture if provided
@@ -443,8 +438,11 @@ def oauth_signin(request, data: OAuthSigninRequestSchema):
         
         return 200, {
             "success": True,
-            "access_token": access_token,
-            "refresh_token": refresh_token
+            "message": "OAuth signin successful",
+            "data": {
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            }
         }
         
     except Exception as e:

@@ -112,6 +112,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         help_text='OAuth provider (e.g., google, facebook, github)'
     )
+
     oauth_id = models.CharField(
         max_length=255,
         blank=True,
@@ -119,6 +120,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         unique=True,
         help_text='Unique ID from OAuth provider'
     )
+    
     oauth_access_token = models.TextField(
         blank=True,
         null=True,
@@ -274,12 +276,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         remaining = self.get_remaining_tokens()
         return remaining >= tokens
 
-    def use_credit(self, action_type='general', description='', tokens=1):
+    def use_credit(self, description='', tokens=1):
         """
         Consume tokens for an action.
 
         Args:
-            action_type: Type of action (e.g., 'transcription', 'audio_conversion')
             description: Optional description of the action
             tokens: Number of tokens to consume (default 1)
 
@@ -292,7 +293,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         # Create credit usage record
         CreditUsage.objects.create(
             user=self,
-            action_type=action_type,
             description=description,
             token_count=tokens,
         )
@@ -446,24 +446,11 @@ class CreditUsage(models.Model):
     """
     Model to track credit usage for users
     """
-    ACTION_TYPE_CHOICES = [
-        ('transcription', 'Transcription'),
-        ('audio_conversion', 'Audio Conversion'),
-        ('video_processing', 'Video Processing'),
-        ('general', 'General'),
-    ]
-    
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='credit_usage',
         help_text='User who used the credit'
-    )
-    action_type = models.CharField(
-        max_length=50,
-        choices=ACTION_TYPE_CHOICES,
-        default='general',
-        help_text='Type of action that consumed the credit'
     )
     description = models.TextField(
         blank=True,
@@ -485,8 +472,7 @@ class CreditUsage(models.Model):
         ordering = ['-used_at']
         indexes = [
             models.Index(fields=['user', '-used_at']),
-            models.Index(fields=['user', 'action_type']),
         ]
-    
+
     def __str__(self):
-        return f"{self.user.email} - {self.action_type} - {self.used_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"{self.user.email} - {self.used_at.strftime('%Y-%m-%d %H:%M')}"
