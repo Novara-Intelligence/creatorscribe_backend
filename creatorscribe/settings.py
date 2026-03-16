@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-7r@a5*^$8f1m9@^rg_zgru%t=b2mo2jj^((trx%#c@)$(@)7u8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1',"*"]
 
 
 # Application definition
@@ -172,7 +172,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:3001",  # Alternative Next.js port
     "http://127.0.0.1:3001",
-    "http://127.0.0.1:5500"
+    "http://127.0.0.1:5500",
+    "http://192.168.1.3:3000",
 ]
 
 # Allow credentials (cookies, authorization headers)
@@ -233,9 +234,14 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 
 # Logging Configuration
+# Create logs directory if not exists
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+
     'formatters': {
         'verbose': {
             'format': '{levelname} {asctime} {module} {message}',
@@ -246,6 +252,7 @@ LOGGING = {
             'style': '{',
         },
     },
+
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
@@ -253,10 +260,11 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+            'filename': LOG_DIR / 'django.log',
             'formatter': 'verbose',
         },
     },
+
     'loggers': {
         'django': {
             'handlers': ['console'],

@@ -78,7 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
     
     # Basic Information
-    full_name = models.CharField(max_length=60, blank=False)
+    full_name = models.CharField(max_length=60, null=True, blank=True)
     email = models.EmailField(
         unique=True,
         validators=[EmailValidator()],

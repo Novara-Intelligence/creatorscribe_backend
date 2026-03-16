@@ -33,7 +33,7 @@ api.add_router("/transcribe", transcribe_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/', auth_api.urls),
+    path('api/v1/auth/', auth_api.urls),
     path('api/', api.urls),
 ]
 

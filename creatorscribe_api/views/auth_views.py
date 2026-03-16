@@ -53,8 +53,6 @@ def register_user(request, data: RegistrationRequestSchema):
             user = User.objects.create_user(
                 email=data.email,
                 password=data.password,
-                full_name=data.full_name,
-                phone_number=data.phone_number,
                 is_verified=False
             )
             
@@ -66,7 +64,7 @@ def register_user(request, data: RegistrationRequestSchema):
                 email=user.email,
                 otp_code=otp.otp_code,
                 otp_type='registration',
-                full_name=user.full_name
+                full_name=user.full_name or user.email
             )
         
         # Return success response with OTP notification
@@ -94,176 +92,183 @@ def register_user(request, data: RegistrationRequestSchema):
 @auth_api.post("/verify-registration", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
 def verify_registration_otp(request, data: RegistrationVerificationRequestSchema):
     try:
+        # Debug prints
+        print("---- VERIFY REGISTRATION DEBUG ----")
+        print("Raw request body:", request.body)
+        print("Parsed data:", data)
+        print("Email:", data.email)
+        print("OTP:", data.otp_code)
+
         # Check if user exists
         try:
             user = User.objects.get(email=data.email)
+            print("User found:", user)
         except User.DoesNotExist:
+            print("User not found")
             return 400, {
                 "success": False,
                 "message": "User with this email does not exist"
             }
-        
-        # Verify OTP for registration
+
+        # Verify OTP
         is_valid, message = OTPVerification.verify_otp(user, data.otp_code, 'registration')
-        
+        print("OTP verification result:", is_valid, message)
+
         if not is_valid:
             return 400, {
                 "success": False,
                 "message": message
             }
-        
-        # Registration OTP verified successfully - complete registration
+
         with transaction.atomic():
-            # Mark user as verified
             user.is_verified = True
             user.last_login = timezone.now()
             user.save(update_fields=['is_verified', 'last_login'])
-            
-            # Create "Self as Client" automatically
-            Client.objects.create(
+            print("User marked as verified")
+
+            client = Client.objects.create(
                 user=user,
-                client_name=user.full_name,
-                contact_person=user.full_name,
                 contact_email=user.email,
-                contact_phone=user.phone_number if user.phone_number else '',
                 industry_type='other'
             )
-        
-        # Generate JWT tokens for the newly registered user
+            print("Client created:", client.id)
+
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
-        
+
+        print("Tokens generated")
+
         return 200, {
             "success": True,
             "message": "Registration completed successfully. You are now signed in.",
-            "access_token": access_token,
-            "refresh_token": refresh_token,
+            "data": {
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            }
         }
-        
+
     except Exception as e:
+        print("Registration verification error:", str(e))
         return 400, {
             "success": False,
             "message": f"Registration verification failed: {str(e)}"
         }
 
-@auth_api.post("/signin", response={200: SigninResponseSchema, 400: ErrorResponseSchema})
+@auth_api.post("/signin", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
 def signin_user(request, data: SigninRequestSchema):
     try:
-        # Check if user exists first
+        # Check if user exists
         try:
             user_check = User.objects.get(email=data.email)
-            if not user_check.is_verified:
-                return 400, {
-                    "success": False,
-                    "message": "Account not verified. Please complete registration first or register again."
-                }
         except User.DoesNotExist:
             return 400, {
                 "success": False,
                 "message": "Invalid email or password"
             }
-        
+
+        # Check if account verified
+        if not user_check.is_verified:
+            return 400, {
+                "success": False,
+                "message": "Account not verified. Please complete registration first."
+            }
+
         # Authenticate user
         user = authenticate(request, email=data.email, password=data.password)
-        
+
         if user is None:
             return 400, {
                 "success": False,
                 "message": "Invalid email or password"
             }
-        
+
+        # Check if active
         if not user.is_active:
             return 400, {
                 "success": False,
                 "message": "User account is deactivated"
             }
-        
-        if not user.is_verified:
-            return 400, {
-                "success": False,
-                "message": "Account not verified. Please complete registration first."
-            }
-        
-        # Generate OTP for signin (every login requires OTP)
-        otp = OTPVerification.generate_otp(user, otp_type='signin')
-        
-        # Send OTP via email (async/background - non-blocking)
-        EmailService.send_otp_email_background(
-            email=user.email,
-            otp_code=otp.otp_code,
-            otp_type='signin',
-            full_name=user.full_name
-        )
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        # Update last login
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
 
         return 200, {
             "success": True,
-            "message": f"OTP sent to {user.email}. Please verify OTP to complete signin."
+            "message": "Signin successful. Welcome back!",
+            "access_token": access_token,
+            "refresh_token": refresh_token
         }
-        
+
     except Exception as e:
         return 400, {
             "success": False,
             "message": f"Signin failed: {str(e)}"
         }
-
-@auth_api.post("/verify-signin", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
-def verify_signin_otp(request, data: SigninVerificationRequestSchema):
-    try:
-        # Check if user exists
-        try:
-            user = User.objects.get(email=data.email)
-        except User.DoesNotExist:
-            return 400, {
-                "success": False,
-                "message": "User with this email does not exist"
-            }
         
-        # Check if user is active
-        if not user.is_active:
-            return 400, {
-                "success": False,
-                "message": "User account is deactivated"
-            }
+# @auth_api.post("/verify-signin", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
+# def verify_signin_otp(request, data: SigninVerificationRequestSchema):
+#     try:
+#         # Check if user exists
+#         try:
+#             user = User.objects.get(email=data.email)
+#         except User.DoesNotExist:
+#             return 400, {
+#                 "success": False,
+#                 "message": "User with this email does not exist"
+#             }
         
-        # Check if user is verified
-        if not user.is_verified:
-            return 400, {
-                "success": False,
-                "message": "Account not verified. Please complete registration first."
-            }
+#         # Check if user is active
+#         if not user.is_active:
+#             return 400, {
+#                 "success": False,
+#                 "message": "User account is deactivated"
+#             }
         
-        # Verify OTP for sign-in
-        is_valid, message = OTPVerification.verify_otp(user, data.otp_code, 'signin')
+#         # Check if user is verified
+#         if not user.is_verified:
+#             return 400, {
+#                 "success": False,
+#                 "message": "Account not verified. Please complete registration first."
+#             }
         
-        if not is_valid:
-            return 400, {
-                "success": False,
-                "message": message
-            }
+#         # Verify OTP for sign-in
+#         is_valid, message = OTPVerification.verify_otp(user, data.otp_code, 'signin')
         
-        # Sign-in OTP verified successfully
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
+#         if not is_valid:
+#             return 400, {
+#                 "success": False,
+#                 "message": message
+#             }
         
-        # Update last login
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
+#         # Sign-in OTP verified successfully
+#         # Generate JWT tokens
+#         refresh = RefreshToken.for_user(user)
+#         access_token = str(refresh.access_token)
+#         refresh_token = str(refresh)
         
-        return 200, {
-            "success": True,
-            "message": "Sign-in successful. Welcome back!",
-            "access_token": access_token,
-            "refresh_token": refresh_token
-        }
+#         # Update last login
+#         user.last_login = timezone.now()
+#         user.save(update_fields=['last_login'])
         
-    except Exception as e:
-        return 400, {
-            "success": False,
-            "message": f"Sign-in verification failed: {str(e)}"
-        }
+#         return 200, {
+#             "success": True,
+#             "message": "Sign-in successful. Welcome back!",
+#             "access_token": access_token,
+#             "refresh_token": refresh_token
+#         }
+        
+#     except Exception as e:
+#         return 400, {
+#             "success": False,
+#             "message": f"Sign-in verification failed: {str(e)}"
+#         }
 
 @auth_api.post("/request-otp", response={200: OTPRequestResponseSchema, 400: OTPRequestResponseSchema})
 def request_otp(request, data: OTPRequestSchema):

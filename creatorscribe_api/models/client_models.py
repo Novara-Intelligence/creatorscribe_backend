@@ -39,7 +39,9 @@ class Client(models.Model):
     # Basic Client Information
     client_name = models.CharField(
         max_length=255,
-        help_text='Name of the client/brand'
+        help_text='Name of the client/brand',
+        blank=True,
+        null=True
     )
     
     brand_logo = models.ImageField(
@@ -59,11 +61,15 @@ class Client(models.Model):
     # Contact Information
     contact_person = models.CharField(
         max_length=255,
-        help_text='Primary contact person name'
+        help_text='Primary contact person name',
+        blank=True,
+        null=True
     )
     
     contact_email = models.EmailField(
-        help_text='Contact email address'
+        help_text='Contact email address',
+        blank=True,
+        null=True
     )
     
     contact_phone = models.CharField(

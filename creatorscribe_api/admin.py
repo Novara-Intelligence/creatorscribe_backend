@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta, date
 from .models import User, OTPVerification, Client, CreditUsage, Job
 
+admin.site.register(OTPVerification)
 # Register your models here.
 class HeroOneAdmin(admin.AdminSite):
     site_header = "HeroOne Authentication Admin"

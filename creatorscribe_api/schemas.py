@@ -9,10 +9,8 @@ class ErrorResponseSchema(Schema):
 
 # Registration Schemas
 class RegistrationRequestSchema(Schema):
-    full_name: str
     email: str
     password: str
-    phone_number: Optional[str] = None
 
 class RegistrationResponseSchema(Schema):
     success: bool
@@ -38,11 +36,15 @@ class SigninVerificationRequestSchema(Schema):
     otp_code: str
 
 # OTP Response Schemas
+class TokenDataSchema(Schema):
+    access_token: str
+    refresh_token: str
+
+
 class TokenResponseSchema(Schema):
     success: bool
     message: str
-    access_token: str
-    refresh_token: str
+    data: TokenDataSchema
 
 # Request OTP Manual Schema ( Resend OTP / Manually trigger a otp)
 class OTPRequestSchema(Schema):
@@ -82,9 +84,9 @@ class OAuthSigninResponseSchema(Schema):
 
 # Client Schemas
 class ClientCreateRequestSchema(Schema):
-    client_name: str
-    contact_person: str
-    contact_email: str
+    client_name: Optional[str] = None
+    contact_person: Optional[str] = None
+    contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     industry_type: str = "other"
     brand_logo: Optional[str] = None  # Base64 encoded image or file path
@@ -103,9 +105,9 @@ class ClientCreateResponseSchema(Schema):
 
 class ClientResponseSchema(Schema):
     id: int
-    client_name: str
-    contact_person: str
-    contact_email: str
+    client_name: Optional[str] = None
+    contact_person: Optional[str] = None
+    contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     industry_type: str
     brand_logo: Optional[str] = None
