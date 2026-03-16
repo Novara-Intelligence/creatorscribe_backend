@@ -227,7 +227,7 @@ def generate_content_from_upload(
         
         # Check if user can use credit
         if not user.can_use_credit():
-            return 400, {"success": False, "message": "Daily credit limit reached. Please upgrade to premium for unlimited access."}
+            return 400, {"success": False, "message": "Monthly token limit reached. Please upgrade to premium for unlimited access."}
         
         # Validate parameters
         if caption_length not in ['short', 'medium', 'long']:
@@ -332,7 +332,7 @@ def upload_and_generate_content(
         
         # Check if user can use credit
         if not user.can_use_credit():
-            return 400, {"success": False, "message": "Daily credit limit reached. Please upgrade to premium for unlimited access."}
+            return 400, {"success": False, "message": "Monthly token limit reached. Please upgrade to premium for unlimited access."}
         
         # Validate file type
         file_type = get_file_type(file.name)

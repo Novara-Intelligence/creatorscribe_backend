@@ -20,6 +20,7 @@ from ..schemas import (
     PasswordResetResponseSchema,
     OAuthSigninRequestSchema,
     OAuthSigninResponseSchema,
+    LogoutRequestSchema,
 )
 from ..models import OTPVerification
 from ..models.client_models import Client
@@ -202,8 +203,10 @@ def signin_user(request, data: SigninRequestSchema):
         return 200, {
             "success": True,
             "message": "Signin successful. Welcome back!",
-            "access_token": access_token,
-            "refresh_token": refresh_token
+            "data": {
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            }
         }
 
     except Exception as e:
@@ -211,64 +214,6 @@ def signin_user(request, data: SigninRequestSchema):
             "success": False,
             "message": f"Signin failed: {str(e)}"
         }
-        
-# @auth_api.post("/verify-signin", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
-# def verify_signin_otp(request, data: SigninVerificationRequestSchema):
-#     try:
-#         # Check if user exists
-#         try:
-#             user = User.objects.get(email=data.email)
-#         except User.DoesNotExist:
-#             return 400, {
-#                 "success": False,
-#                 "message": "User with this email does not exist"
-#             }
-        
-#         # Check if user is active
-#         if not user.is_active:
-#             return 400, {
-#                 "success": False,
-#                 "message": "User account is deactivated"
-#             }
-        
-#         # Check if user is verified
-#         if not user.is_verified:
-#             return 400, {
-#                 "success": False,
-#                 "message": "Account not verified. Please complete registration first."
-#             }
-        
-#         # Verify OTP for sign-in
-#         is_valid, message = OTPVerification.verify_otp(user, data.otp_code, 'signin')
-        
-#         if not is_valid:
-#             return 400, {
-#                 "success": False,
-#                 "message": message
-#             }
-        
-#         # Sign-in OTP verified successfully
-#         # Generate JWT tokens
-#         refresh = RefreshToken.for_user(user)
-#         access_token = str(refresh.access_token)
-#         refresh_token = str(refresh)
-        
-#         # Update last login
-#         user.last_login = timezone.now()
-#         user.save(update_fields=['last_login'])
-        
-#         return 200, {
-#             "success": True,
-#             "message": "Sign-in successful. Welcome back!",
-#             "access_token": access_token,
-#             "refresh_token": refresh_token
-#         }
-        
-#     except Exception as e:
-#         return 400, {
-#             "success": False,
-#             "message": f"Sign-in verification failed: {str(e)}"
-#         }
 
 @auth_api.post("/request-otp", response={200: OTPRequestResponseSchema, 400: OTPRequestResponseSchema})
 def request_otp(request, data: OTPRequestSchema):
@@ -283,10 +228,10 @@ def request_otp(request, data: OTPRequestSchema):
             }
         
         # Validate OTP type
-        if data.otp_type not in ['registration', 'signin', 'password_reset']:
+        if data.otp_type not in ['registration', 'password_reset']:
             return 400, {
                 "success": False,
-                "message": "Invalid OTP type. Must be 'registration', 'signin', or 'password_reset'",
+                "message": "Invalid OTP type. Must be 'registration' or 'password_reset'",
             }
         
         # Check verification status based on OTP type
@@ -507,3 +452,12 @@ def oauth_signin(request, data: OAuthSigninRequestSchema):
             "success": False,
             "message": f"OAuth signin failed: {str(e)}"
         }
+
+@auth_api.post("/logout", response={200: ErrorResponseSchema, 400: ErrorResponseSchema})
+def logout_user(request, data: LogoutRequestSchema):
+    try:
+        token = RefreshToken(data.refresh_token)
+        token.blacklist()
+        return 200, {"success": True, "message": "Logged out successfully."}
+    except Exception as e:
+        return 400, {"success": False, "message": f"Logout failed: {str(e)}"}

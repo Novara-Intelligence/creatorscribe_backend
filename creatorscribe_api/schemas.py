@@ -49,7 +49,7 @@ class TokenResponseSchema(Schema):
 # Request OTP Manual Schema ( Resend OTP / Manually trigger a otp)
 class OTPRequestSchema(Schema):
     email: str
-    otp_type: str = "registration"  # registration, signin, password_reset
+    otp_type: str = "registration"  # registration, password_reset
 
 class OTPRequestResponseSchema(Schema):
     success: bool
@@ -126,5 +126,8 @@ class ClientListResponseSchema(Schema):
     message: str
     data: List[ClientResponseSchema]
     count: int
+
+class LogoutRequestSchema(Schema):
+    refresh_token: str
 
 

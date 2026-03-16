@@ -219,14 +219,14 @@ class UserAdmin(BaseUserAdmin):
     subscription_status_display.admin_order_field = 'subscription_type'
     
     def credits_remaining_display(self, obj):
-        """Display remaining credits for today"""
+        """Display remaining tokens for the current month"""
         if obj.is_premium():
             return "∞ Unlimited"
-        remaining = obj.get_remaining_credits()
-        used = obj.get_credits_used_today()
-        limit = obj.get_daily_credit_limit()
-        return f"{remaining}/{limit} (used: {used})"
-    credits_remaining_display.short_description = 'Credits Today'
+        remaining = obj.get_remaining_tokens()
+        used = obj.get_tokens_used_this_month()
+        limit = obj.get_monthly_token_limit()
+        return f"{remaining:,}/{limit:,} (used: {used:,})"
+    credits_remaining_display.short_description = 'Tokens This Month'
     
     def get_queryset(self, request):
         """Optimize queryset with prefetch_related for OTPs"""

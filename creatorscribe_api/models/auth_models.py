@@ -26,6 +26,7 @@ class CustomUserManager(BaseUserManager):
             counter += 1
         
         extra_fields['username'] = username
+        extra_fields.setdefault('full_name', username)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -182,7 +183,11 @@ class User(AbstractBaseUser, PermissionsMixin):
                 counter += 1
             
             self.username = username
-        
+
+        # Default full_name to username for new users if not set
+        if not self.pk and not self.full_name and self.username:
+            self.full_name = self.username
+
         # Set subscription_start_date if it's a new user
         if not self.pk and not self.subscription_start_date:
             self.subscription_start_date = timezone.now()
@@ -236,63 +241,67 @@ class User(AbstractBaseUser, PermissionsMixin):
         # Keep the end date for historical records
         self.save(update_fields=['subscription_type'])
     
-    def get_daily_credit_limit(self):
-        """Get the daily credit limit based on subscription type"""
+    def get_monthly_token_limit(self):
+        """Get the monthly token limit based on subscription type"""
         if self.is_premium():
             return None  # Unlimited for premium users
-        return 3  # Free users get 3 credits per day
-    
-    def get_credits_used_today(self):
-        """Get the number of credits used today"""
-        today = date.today()
+        return 10000  # Free users get 10,000 tokens per month
+
+    def get_tokens_used_this_month(self):
+        """Get the number of tokens used in the current calendar month"""
+        from django.utils import timezone as tz
+        now = tz.now()
         return CreditUsage.objects.filter(
             user=self,
-            used_at__date=today
-        ).count()
-    
-    def get_remaining_credits(self):
-        """Get remaining credits for today"""
+            used_at__year=now.year,
+            used_at__month=now.month,
+        ).aggregate(total=models.Sum('token_count'))['total'] or 0
+
+    def get_remaining_tokens(self):
+        """Get remaining tokens for the current month"""
         if self.is_premium():
             return None  # Unlimited
-        
-        limit = self.get_daily_credit_limit()
-        used = self.get_credits_used_today()
+
+        limit = self.get_monthly_token_limit()
+        used = self.get_tokens_used_this_month()
         return max(0, limit - used)
-    
-    def can_use_credit(self):
-        """Check if user can use a credit"""
+
+    def can_use_credit(self, tokens=1):
+        """Check if user can consume the given number of tokens"""
         if self.is_premium():
-            return True  # Premium users have unlimited credits
-        
-        remaining = self.get_remaining_credits()
-        return remaining > 0
-    
-    def use_credit(self, action_type='general', description=''):
+            return True  # Premium users have unlimited tokens
+
+        remaining = self.get_remaining_tokens()
+        return remaining >= tokens
+
+    def use_credit(self, action_type='general', description='', tokens=1):
         """
-        Consume one credit for an action
-        
+        Consume tokens for an action.
+
         Args:
             action_type: Type of action (e.g., 'transcription', 'audio_conversion')
             description: Optional description of the action
-        
+            tokens: Number of tokens to consume (default 1)
+
         Returns:
             Tuple[bool, str]: (Success status, message)
         """
-        if not self.can_use_credit():
-            return False, "Daily credit limit reached. Please upgrade to premium for unlimited access."
-        
+        if not self.can_use_credit(tokens):
+            return False, "Monthly token limit reached. Please upgrade to premium for unlimited access."
+
         # Create credit usage record
         CreditUsage.objects.create(
             user=self,
             action_type=action_type,
-            description=description
+            description=description,
+            token_count=tokens,
         )
-        
+
         if self.is_premium():
-            return True, "Credit used (unlimited available)"
+            return True, "Tokens used (unlimited available)"
         else:
-            remaining = self.get_remaining_credits()
-            return True, f"Credit used. {remaining} credits remaining today."
+            remaining = self.get_remaining_tokens()
+            return True, f"Tokens used. {remaining} tokens remaining this month."
     
     def upgrade_to_premium(self, subscription_type='premium_monthly'):
         """
@@ -460,6 +469,10 @@ class CreditUsage(models.Model):
         blank=True,
         null=True,
         help_text='Optional description of the action'
+    )
+    token_count = models.PositiveIntegerField(
+        default=1,
+        help_text='Number of tokens consumed by this action'
     )
     used_at = models.DateTimeField(
         auto_now_add=True,
