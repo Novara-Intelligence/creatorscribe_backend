@@ -128,7 +128,7 @@ def verify_registration_otp(request, data: RegistrationVerificationRequestSchema
             print("User marked as verified")
 
             client = Client.objects.create(
-                user=user,
+                owner=user,
                 client_name=user.username,
             )
             print("Client created:", client.id)
@@ -404,7 +404,7 @@ def oauth_signin(request, data: OAuthSigninRequestSchema):
                 
                 # Create "Self as Client" automatically for new OAuth users
                 Client.objects.create(
-                    user=user,
+                    owner=user,
                     client_name=user.username,
                 )
                 

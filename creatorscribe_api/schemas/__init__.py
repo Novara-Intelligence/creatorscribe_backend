@@ -23,6 +23,12 @@ from .client_schemas import (
     ClientCreateResponseSchema,
     ClientListResponseSchema,
 )
+from .social_account_schemas import (
+    SocialAccountConnectSchema,
+    SocialAccountResponseSchema,
+    SocialAccountListResponseSchema,
+    SocialAccountDetailResponseSchema,
+)
 
 __all__ = [
     # Auth
@@ -48,4 +54,9 @@ __all__ = [
     'ClientResponseSchema',
     'ClientCreateResponseSchema',
     'ClientListResponseSchema',
+    # Social Accounts
+    'SocialAccountConnectSchema',
+    'SocialAccountResponseSchema',
+    'SocialAccountListResponseSchema',
+    'SocialAccountDetailResponseSchema',
 ]

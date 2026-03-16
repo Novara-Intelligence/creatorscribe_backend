@@ -12,6 +12,7 @@ class ClientResponseSchema(Schema):
     id: int
     client_name: Optional[str] = None
     brand_logo: Optional[str] = None
+    role: Optional[str] = None  # 'owner' | 'admin' | 'editor' | 'viewer'
     created_at: datetime
     updated_at: datetime
 
