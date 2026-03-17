@@ -1,5 +1,4 @@
 from ninja import Router
-from ninja.security import HttpBearer
 from ninja_jwt.tokens import AccessToken
 from django.contrib.auth import get_user_model
 from ..models.client_models import Client
@@ -11,19 +10,11 @@ from ..schemas.social_account_schemas import (
     SocialAccountListResponseSchema,
     SocialAccountDetailResponseSchema,
 )
+from ..authentication import AuthBearer
 
 User = get_user_model()
 
 VALID_PLATFORMS = [choice[0] for choice in SocialAccount.PLATFORM_CHOICES]
-
-
-class AuthBearer(HttpBearer):
-    def authenticate(self, request, token):
-        try:
-            access_token = AccessToken(token)
-            return User.objects.get(id=access_token['user_id'])
-        except Exception:
-            return None
 
 
 social_router = Router(tags=["Social Accounts"])

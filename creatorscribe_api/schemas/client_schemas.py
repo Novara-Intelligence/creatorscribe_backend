@@ -3,6 +3,10 @@ from typing import Optional, List
 from datetime import datetime
 
 
+class SocialAccountSchema(Schema):
+    platform: str
+
+
 class ClientCreateRequestSchema(Schema):
     client_name: Optional[str] = None
     brand_logo: Optional[str] = None  # Base64 encoded image or file path
@@ -13,6 +17,7 @@ class ClientResponseSchema(Schema):
     client_name: Optional[str] = None
     brand_logo: Optional[str] = None
     role: Optional[str] = None  # 'owner' | 'admin' | 'editor' | 'viewer'
+    social_accounts: List[str] = []
     created_at: datetime
     updated_at: datetime
 

@@ -1,5 +1,4 @@
 from ninja import Router
-from ninja.security import HttpBearer
 from ninja_jwt.tokens import AccessToken
 from typing import Optional
 from django.contrib.auth import get_user_model
@@ -13,17 +12,9 @@ from ..schemas.client_member_schemas import (
     MemberListResponseSchema,
     MemberDetailResponseSchema,
 )
+from ..authentication import AuthBearer
 
 User = get_user_model()
-
-
-class AuthBearer(HttpBearer):
-    def authenticate(self, request, token):
-        try:
-            access_token = AccessToken(token)
-            return User.objects.get(id=access_token['user_id'])
-        except Exception:
-            return None
 
 
 member_router = Router(tags=["Client Members"])
