@@ -6,6 +6,7 @@ from datetime import datetime
 class ClientCreateRequestSchema(Schema):
     client_name: Optional[str] = None
     brand_logo: Optional[str] = None  # Base64 encoded image or file path
+    invite_emails: Optional[List[str]] = None  # Optional list of emails to invite as members
 
 
 class ClientResponseSchema(Schema):

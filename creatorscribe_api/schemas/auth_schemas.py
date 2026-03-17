@@ -104,6 +104,16 @@ class ProfileDataSchema(Schema):
     remaining_tokens: Optional[int] = None  # None for premium (unlimited)
 
 
+class UserLookupResponseSchema(Schema):
+    success: bool
+    message: str
+    found: bool
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    profile_pic: Optional[str] = None
+    already_in_client: Optional[bool] = None  # None if client_id not provided
+
+
 class ProfileResponseSchema(Schema):
     success: bool
     message: str

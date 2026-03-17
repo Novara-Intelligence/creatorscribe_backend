@@ -74,6 +74,7 @@ class ClientMember(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
     ]
 
     client = models.ForeignKey(

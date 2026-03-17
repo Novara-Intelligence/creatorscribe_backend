@@ -12,6 +12,7 @@ from ..schemas.client_member_schemas import (
     MemberResponseSchema,
     MemberListResponseSchema,
     MemberDetailResponseSchema,
+    InviteListResponseSchema,
 )
 
 User = get_user_model()
@@ -104,9 +105,9 @@ def list_members(request, client_id: int, search: Optional[str] = None):
 
 @member_router.post(
     "/{client_id}/members/invite",
-    response={201: MemberDetailResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema, 404: ErrorResponseSchema},
+    response={201: ErrorResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema, 404: ErrorResponseSchema},
     auth=AuthBearer(),
-    summary="Invite a user to a client by email",
+    summary="Invite one or more users to a client by email",
 )
 def invite_member(request, client_id: int, payload: InviteMemberSchema):
     user = request.auth
@@ -117,44 +118,41 @@ def invite_member(request, client_id: int, payload: InviteMemberSchema):
     if not client:
         return 404, {"success": False, "message": f"No client found with ID {client_id} or insufficient permissions"}
 
-    # Find the user to invite
-    try:
-        invitee = User.objects.get(email=payload.email)
-    except User.DoesNotExist:
-        return 400, {"success": False, "message": f"No user found with email {payload.email}"}
+    if not payload.emails:
+        return 400, {"success": False, "message": "At least one email is required"}
 
-    if invitee == client.owner:
-        return 400, {"success": False, "message": "Cannot invite the owner as a member"}
+    invited = []
+    for email in payload.emails:
+        email = email.strip().lower()
+        try:
+            invitee = User.objects.get(email=email)
+        except User.DoesNotExist:
+            continue
 
-    member, created = ClientMember.objects.get_or_create(
-        client=client,
-        user=invitee,
-        defaults={
-            "role": payload.role,
-            "status": "pending",
-            "invited_by": user,
-        }
-    )
+        if invitee == client.owner:
+            continue
 
-    if not created:
-        if member.status == 'accepted':
-            return 400, {"success": False, "message": f"{payload.email} is already a member"}
-        # Re-invite: update role and reset to pending
-        member.role = payload.role
-        member.status = "pending"
-        member.invited_by = user
-        member.save(update_fields=['role', 'status', 'invited_by', 'updated_at'])
+        member, created = ClientMember.objects.get_or_create(
+            client=client,
+            user=invitee,
+            defaults={"role": payload.role, "status": "pending", "invited_by": user},
+        )
 
-    return 201, {
-        "success": True,
-        "message": f"Invite sent to {invitee.email}",
-        "data": _serialize_member(member, request),
-    }
+        if not created and member.status != 'accepted':
+            member.role = payload.role
+            member.status = "pending"
+            member.invited_by = user
+            member.save(update_fields=['role', 'status', 'invited_by', 'updated_at'])
+
+        if member.status != 'accepted':
+            invited.append(_serialize_member(member, request))
+
+    return 201, {"success": True, "message": f"{len(invited)} invite(s) sent"}
 
 
 @member_router.post(
     "/{client_id}/members/accept",
-    response={200: MemberDetailResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema, 404: ErrorResponseSchema},
+    response={200: ErrorResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema, 404: ErrorResponseSchema},
     auth=AuthBearer(),
     summary="Accept a pending invite to a client",
 )
@@ -175,11 +173,65 @@ def accept_invite(request, client_id: int):
     member.status = 'accepted'
     member.save(update_fields=['status', 'updated_at'])
 
+    return 200, {"success": True, "message": f"You have joined '{member.client.client_name}' as {member.role}"}
+
+
+@member_router.get(
+    "/my-invites",
+    response={200: InviteListResponseSchema, 401: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Get all pending invites for the authenticated user",
+)
+def get_my_invites(request):
+    user = request.auth
+    if not user:
+        return 401, {"success": False, "message": "Authentication required"}
+
+    invites = ClientMember.objects.filter(
+        user=user, status='pending'
+    ).select_related('client', 'invited_by').order_by('-created_at')
+
+    data = [
+        {
+            "id": inv.id,
+            "client_id": inv.client_id,
+            "client_name": inv.client.client_name,
+            "client_logo": request.build_absolute_uri(inv.client.brand_logo.url) if inv.client.brand_logo else None,
+            "invited_by_email": inv.invited_by.email if inv.invited_by else None,
+            "role": inv.role,
+            "created_at": inv.created_at,
+        }
+        for inv in invites
+    ]
+
     return 200, {
         "success": True,
-        "message": f"You have joined '{member.client.client_name}' as {member.role}",
-        "data": _serialize_member(member, request),
+        "message": "Invites retrieved successfully",
+        "data": data,
+        "count": len(data),
     }
+
+
+@member_router.post(
+    "/{client_id}/members/reject",
+    response={200: ErrorResponseSchema, 401: ErrorResponseSchema, 404: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Reject a pending invite",
+)
+def reject_invite(request, client_id: int):
+    user = request.auth
+    if not user:
+        return 401, {"success": False, "message": "Authentication required"}
+
+    try:
+        member = ClientMember.objects.get(client_id=client_id, user=user, status='pending')
+    except ClientMember.DoesNotExist:
+        return 404, {"success": False, "message": "No pending invite found for this client"}
+
+    member.status = 'rejected'
+    member.save(update_fields=['status', 'updated_at'])
+
+    return 200, {"success": True, "message": "Invite rejected"}
 
 
 @member_router.patch(

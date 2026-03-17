@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class InviteMemberSchema(Schema):
-    email: str
+    emails: List[str]
     role: str = "viewer"  # admin | editor | viewer
 
 
@@ -35,4 +35,21 @@ class MemberListResponseSchema(Schema):
     success: bool
     message: str
     data: List[MemberResponseSchema]
+    count: int
+
+
+class InviteResponseSchema(Schema):
+    id: int
+    client_id: int
+    client_name: Optional[str] = None
+    client_logo: Optional[str] = None
+    invited_by_email: Optional[str] = None
+    role: str
+    created_at: datetime
+
+
+class InviteListResponseSchema(Schema):
+    success: bool
+    message: str
+    data: List[InviteResponseSchema]
     count: int

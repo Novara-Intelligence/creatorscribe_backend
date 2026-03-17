@@ -1,14 +1,16 @@
-from ninja import Router
+import json
+from typing import Optional, List
+from ninja import Router, File, Form
+from ninja.files import UploadedFile
 from ninja.security import HttpBearer
 from ninja_jwt.tokens import AccessToken
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from ..models.client_models import Client
+from ..models.client_models import Client, ClientMember
 from ..schemas import (
     ErrorResponseSchema,
     ClientResponseSchema,
     ClientListResponseSchema,
-    ClientCreateRequestSchema,
     ClientCreateResponseSchema,
 )
 
@@ -97,38 +99,55 @@ def get_client_detail(request, client_id: int):
     "/add-client",
     response={201: ClientCreateResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema},
     auth=AuthBearer(),
-    summary="Create a new client",
+    summary="Create a new client (multipart/form-data)",
 )
-def add_client(request, payload: ClientCreateRequestSchema):
+def add_client(
+    request,
+    client_name: Form[Optional[str]] = None,
+    brand_logo: File[Optional[UploadedFile]] = None,
+    invite_emails: Form[Optional[str]] = None,  # JSON string: '["a@b.com","c@d.com"]'
+):
     user = request.auth
     if not user:
         return 401, {"success": False, "message": "Authentication required"}
 
     try:
-        brand_logo_file = None
-        if payload.brand_logo:
-            try:
-                import base64
-                import os
-                from django.core.files.base import ContentFile
-
-                if payload.brand_logo.startswith('data:image/'):
-                    header, data = payload.brand_logo.split(',', 1)
-                    file_ext = header.split('/')[1].split(';')[0]
-                    image_data = base64.b64decode(data)
-                    brand_logo_file = ContentFile(image_data, name=f"brand_logo_{user.id}.{file_ext}")
-                elif payload.brand_logo.startswith('/') and os.path.exists(payload.brand_logo):
-                    with open(payload.brand_logo, 'rb') as f:
-                        file_ext = payload.brand_logo.split('.')[-1]
-                        brand_logo_file = ContentFile(f.read(), name=f"brand_logo_{user.id}.{file_ext}")
-            except Exception as e:
-                return 400, {"success": False, "message": f"Invalid brand_logo: {str(e)}"}
+        # Validate brand logo type if provided
+        if brand_logo:
+            allowed_types = ('image/jpeg', 'image/png', 'image/gif', 'image/webp')
+            if brand_logo.content_type not in allowed_types:
+                return 400, {"success": False, "message": "Invalid image type. Allowed: jpeg, png, gif, webp"}
 
         client = Client.objects.create(
             owner=user,
-            client_name=payload.client_name,
-            brand_logo=brand_logo_file,
+            client_name=client_name,
+            brand_logo=brand_logo,
         )
+
+        # Process invites if provided (expects JSON array string)
+        emails: List[str] = []
+        if invite_emails:
+            try:
+                emails = json.loads(invite_emails)
+            except (json.JSONDecodeError, TypeError):
+                # Fallback: treat as single comma-separated string
+                emails = [e.strip() for e in invite_emails.split(',') if e.strip()]
+
+        if emails:
+            User_ = user.__class__
+            for email in emails:
+                email = email.strip().lower()
+                if email == user.email:
+                    continue
+                try:
+                    invitee = User_.objects.get(email=email)
+                    ClientMember.objects.get_or_create(
+                        client=client,
+                        user=invitee,
+                        defaults={"role": "viewer", "status": "pending", "invited_by": user},
+                    )
+                except User_.DoesNotExist:
+                    pass
 
         return 201, {
             "success": True,

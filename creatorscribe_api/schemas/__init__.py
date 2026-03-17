@@ -19,6 +19,7 @@ from .auth_schemas import (
     RefreshTokenRequestSchema,
     ProfileDataSchema,
     ProfileResponseSchema,
+    UserLookupResponseSchema,
 )
 from .client_schemas import (
     ClientCreateRequestSchema,

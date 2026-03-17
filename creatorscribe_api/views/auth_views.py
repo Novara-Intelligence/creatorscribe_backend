@@ -27,6 +27,7 @@ from ..schemas import (
     LogoutRequestSchema,
     RefreshTokenRequestSchema,
     ProfileResponseSchema,
+    UserLookupResponseSchema,
 )
 from ..models import OTPVerification
 from ..models.client_models import Client
@@ -475,6 +476,48 @@ def logout_user(request, data: LogoutRequestSchema):
         return 200, {"success": True, "message": "Logged out successfully."}
     except Exception as e:
         return 400, {"success": False, "message": f"Logout failed: {str(e)}"}
+
+@auth_api.get(
+    "/check-user",
+    response={200: UserLookupResponseSchema},
+    auth=AuthBearer(),
+    summary="Check if a user exists by exact email",
+    description="Returns basic profile info if the user is found. Only call with a complete email address.",
+)
+def check_user_by_email(request, email: str, client_id: int = None):
+    import re
+    from ..models.client_models import Client
+
+    if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+        return 200, {"success": True, "found": False, "message": "Invalid email format"}
+
+    try:
+        found_user = User.objects.get(email=email.strip().lower(), is_verified=True)
+    except User.DoesNotExist:
+        return 200, {"success": True, "found": False, "message": "No user found with this email"}
+
+    profile_pic = None
+    if found_user.profile_pic:
+        profile_pic = request.build_absolute_uri(found_user.profile_pic.url)
+
+    already_in_client = None
+    if client_id is not None:
+        try:
+            client = Client.objects.get(id=client_id)
+            already_in_client = client.is_member(found_user)
+        except Client.DoesNotExist:
+            pass
+
+    return 200, {
+        "success": True,
+        "found": True,
+        "message": "Already in client" if already_in_client else "User found",
+        "email": found_user.email,
+        "full_name": found_user.full_name,
+        "profile_pic": profile_pic,
+        "already_in_client": already_in_client,
+    }
+
 
 @auth_api.post("/refresh-token", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
 def refresh_token(request, data: RefreshTokenRequestSchema):
