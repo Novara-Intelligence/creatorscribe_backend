@@ -1,9 +1,13 @@
-from ninja import NinjaAPI
+from ninja import NinjaAPI, File, Form
+from ninja.files import UploadedFile
+from ninja.security import HttpBearer
+from ninja_jwt.tokens import AccessToken
 from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from ninja_jwt.tokens import RefreshToken
+from typing import Optional
 from ..schemas import (
     RegistrationRequestSchema,
     RegistrationResponseSchema,
@@ -22,12 +26,23 @@ from ..schemas import (
     OAuthSigninResponseSchema,
     LogoutRequestSchema,
     RefreshTokenRequestSchema,
+    ProfileResponseSchema,
 )
 from ..models import OTPVerification
 from ..models.client_models import Client
 from ..services.email_service import EmailService
 
 User = get_user_model()
+
+
+class AuthBearer(HttpBearer):
+    def authenticate(self, request, token):
+        try:
+            access_token = AccessToken(token)
+            return User.objects.get(id=access_token['user_id'])
+        except Exception:
+            return None
+
 
 # Initialize Django Ninja API for authentication
 auth_api = NinjaAPI(version="1.0.0", title="CreatorScribe Authentication API", urls_namespace="auth")
@@ -475,3 +490,92 @@ def refresh_token(request, data: RefreshTokenRequestSchema):
         }
     except Exception as e:
         return 400, {"success": False, "message": f"Token refresh failed: {str(e)}"}
+
+@auth_api.get(
+    "/profile",
+    response={200: ProfileResponseSchema, 401: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Get authenticated user profile",
+)
+def get_profile(request):
+    user = request.auth
+
+    profile_pic_url = None
+    if user.profile_pic:
+        profile_pic_url = request.build_absolute_uri(user.profile_pic.url)
+
+    days_left = None
+    if user.subscription_type != 'free' and user.subscription_end_date:
+        delta = user.subscription_end_date - timezone.now()
+        days_left = max(0, delta.days)
+
+    return 200, {
+        "success": True,
+        "message": "Profile retrieved successfully",
+        "data": {
+            "profile_pic": profile_pic_url,
+            "email": user.email,
+            "full_name": user.full_name,
+            "current_plan": user.subscription_type,
+            "days_left": days_left,
+        }
+    }
+
+
+@auth_api.patch(
+    "/profile",
+    response={200: ProfileResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Update authenticated user's name and/or profile picture",
+)
+def edit_profile(
+    request,
+    full_name: Form[Optional[str]] = None,
+    profile_pic: File[Optional[UploadedFile]] = None,
+):
+    user = request.auth
+
+    if full_name is None and profile_pic is None:
+        return 400, {"success": False, "message": "Provide at least one field to update (full_name or profile_pic)"}
+
+    update_fields = []
+
+    if full_name is not None:
+        full_name = full_name.strip()
+        if not full_name:
+            return 400, {"success": False, "message": "full_name cannot be blank"}
+        user.full_name = full_name
+        update_fields.append('full_name')
+
+    if profile_pic is not None:
+        allowed_types = ('image/jpeg', 'image/png', 'image/gif', 'image/webp')
+        if profile_pic.content_type not in allowed_types:
+            return 400, {"success": False, "message": "Invalid image type. Allowed: jpeg, png, gif, webp"}
+        # Delete old profile pic to avoid orphan files
+        if user.profile_pic:
+            user.profile_pic.delete(save=False)
+        user.profile_pic = profile_pic
+        update_fields.append('profile_pic')
+
+    user.save(update_fields=update_fields)
+
+    profile_pic_url = None
+    if user.profile_pic:
+        profile_pic_url = request.build_absolute_uri(user.profile_pic.url)
+
+    days_left = None
+    if user.subscription_type != 'free' and user.subscription_end_date:
+        delta = user.subscription_end_date - timezone.now()
+        days_left = max(0, delta.days)
+
+    return 200, {
+        "success": True,
+        "message": "Profile updated successfully",
+        "data": {
+            "profile_pic": profile_pic_url,
+            "email": user.email,
+            "full_name": user.full_name,
+            "current_plan": user.subscription_type,
+            "days_left": days_left,
+        }
+    }

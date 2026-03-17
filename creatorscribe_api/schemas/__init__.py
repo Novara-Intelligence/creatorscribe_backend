@@ -17,6 +17,8 @@ from .auth_schemas import (
     OAuthSigninResponseSchema,
     LogoutRequestSchema,
     RefreshTokenRequestSchema,
+    ProfileDataSchema,
+    ProfileResponseSchema,
 )
 from .client_schemas import (
     ClientCreateRequestSchema,
@@ -50,6 +52,8 @@ __all__ = [
     'OAuthSigninRequestSchema',
     'OAuthSigninResponseSchema',
     'LogoutRequestSchema',
+    'ProfileDataSchema',
+    'ProfileResponseSchema',
     # Client
     'ClientCreateRequestSchema',
     'ClientResponseSchema',

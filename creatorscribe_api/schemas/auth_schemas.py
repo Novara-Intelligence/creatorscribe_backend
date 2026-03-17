@@ -91,6 +91,18 @@ class OAuthSigninResponseSchema(Schema):
 class LogoutRequestSchema(Schema):
     refresh_token: str
 
-
 class RefreshTokenRequestSchema(Schema):
     refresh_token: str
+    
+class ProfileDataSchema(Schema):
+    profile_pic: Optional[str] = None
+    email: str
+    full_name: Optional[str] = None
+    current_plan: str
+    days_left: Optional[int] = None
+
+
+class ProfileResponseSchema(Schema):
+    success: bool
+    message: str
+    data: ProfileDataSchema
