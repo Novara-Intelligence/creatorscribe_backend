@@ -1,4 +1,6 @@
 from ninja import NinjaAPI
+from ninja.security import HttpBearer
+from ninja_jwt.tokens import AccessToken
 from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -21,12 +23,23 @@ from ..schemas import (
     OAuthSigninRequestSchema,
     OAuthSigninResponseSchema,
     LogoutRequestSchema,
+    ProfileResponseSchema,
 )
 from ..models import OTPVerification
 from ..models.client_models import Client
 from ..services.email_service import EmailService
 
 User = get_user_model()
+
+
+class AuthBearer(HttpBearer):
+    def authenticate(self, request, token):
+        try:
+            access_token = AccessToken(token)
+            return User.objects.get(id=access_token['user_id'])
+        except Exception:
+            return None
+
 
 # Initialize Django Ninja API for authentication
 auth_api = NinjaAPI(version="1.0.0", title="CreatorScribe Authentication API", urls_namespace="auth")
@@ -459,3 +472,34 @@ def logout_user(request, data: LogoutRequestSchema):
         return 200, {"success": True, "message": "Logged out successfully."}
     except Exception as e:
         return 400, {"success": False, "message": f"Logout failed: {str(e)}"}
+
+
+@auth_api.get(
+    "/profile",
+    response={200: ProfileResponseSchema, 401: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Get authenticated user profile",
+)
+def get_profile(request):
+    user = request.auth
+
+    profile_pic_url = None
+    if user.profile_pic:
+        profile_pic_url = request.build_absolute_uri(user.profile_pic.url)
+
+    days_left = None
+    if user.subscription_type != 'free' and user.subscription_end_date:
+        delta = user.subscription_end_date - timezone.now()
+        days_left = max(0, delta.days)
+
+    return 200, {
+        "success": True,
+        "message": "Profile retrieved successfully",
+        "data": {
+            "profile_pic": profile_pic_url,
+            "email": user.email,
+            "full_name": user.full_name,
+            "current_plan": user.subscription_type,
+            "days_left": days_left,
+        }
+    }
