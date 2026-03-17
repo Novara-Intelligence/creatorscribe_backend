@@ -90,3 +90,7 @@ class OAuthSigninResponseSchema(Schema):
 
 class LogoutRequestSchema(Schema):
     refresh_token: str
+
+
+class RefreshTokenRequestSchema(Schema):
+    refresh_token: str

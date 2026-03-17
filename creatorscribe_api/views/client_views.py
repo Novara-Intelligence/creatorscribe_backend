@@ -20,7 +20,8 @@ class AuthBearer(HttpBearer):
         try:
             access_token = AccessToken(token)
             return User.objects.get(id=access_token['user_id'])
-        except Exception:
+        except Exception as e:
+            print(f"[AuthBearer] Token validation failed: {type(e).__name__}: {e}")
             return None
 
 

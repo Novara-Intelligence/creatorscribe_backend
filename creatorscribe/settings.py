@@ -145,7 +145,7 @@ from datetime import timedelta
 NINJA_JWT = {
     # Token lifetimes
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     
     # Token refresh settings
     'ROTATE_REFRESH_TOKENS': True,
@@ -171,8 +171,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js default development port
     "http://127.0.0.1:3000",
     "http://localhost:3001",  # Alternative Next.js port
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:5500",
     "http://192.168.1.3:3000",
 ]
 

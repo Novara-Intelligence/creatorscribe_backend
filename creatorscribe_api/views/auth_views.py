@@ -21,6 +21,7 @@ from ..schemas import (
     OAuthSigninRequestSchema,
     OAuthSigninResponseSchema,
     LogoutRequestSchema,
+    RefreshTokenRequestSchema,
 )
 from ..models import OTPVerification
 from ..models.client_models import Client
@@ -459,3 +460,18 @@ def logout_user(request, data: LogoutRequestSchema):
         return 200, {"success": True, "message": "Logged out successfully."}
     except Exception as e:
         return 400, {"success": False, "message": f"Logout failed: {str(e)}"}
+
+@auth_api.post("/refresh-token", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
+def refresh_token(request, data: RefreshTokenRequestSchema):
+    try:
+        refresh = RefreshToken(data.refresh_token)
+        return 200, {
+            "success": True,
+            "message": "Token refreshed successfully.",
+            "data": {
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
+            }
+        }
+    except Exception as e:
+        return 400, {"success": False, "message": f"Token refresh failed: {str(e)}"}

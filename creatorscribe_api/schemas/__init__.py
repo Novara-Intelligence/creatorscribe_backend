@@ -16,6 +16,7 @@ from .auth_schemas import (
     OAuthSigninRequestSchema,
     OAuthSigninResponseSchema,
     LogoutRequestSchema,
+    RefreshTokenRequestSchema,
 )
 from .client_schemas import (
     ClientCreateRequestSchema,
