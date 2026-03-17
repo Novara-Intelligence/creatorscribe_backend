@@ -509,6 +509,10 @@ def get_profile(request):
         delta = user.subscription_end_date - timezone.now()
         days_left = max(0, delta.days)
 
+    is_premium = user.is_premium()
+    total_tokens = None if is_premium else user.get_monthly_token_limit()
+    remaining_tokens = None if is_premium else user.get_remaining_tokens()
+
     return 200, {
         "success": True,
         "message": "Profile retrieved successfully",
@@ -516,8 +520,10 @@ def get_profile(request):
             "profile_pic": profile_pic_url,
             "email": user.email,
             "full_name": user.full_name,
-            "current_plan": user.subscription_type,
+            "current_plan": "Premium" if is_premium else "Free",
             "days_left": days_left,
+            "total_tokens": total_tokens,
+            "remaining_tokens": remaining_tokens,
         }
     }
 
@@ -575,7 +581,7 @@ def edit_profile(
             "profile_pic": profile_pic_url,
             "email": user.email,
             "full_name": user.full_name,
-            "current_plan": user.subscription_type,
+            "current_plan": "Premium" if user.is_premium() else "Free",
             "days_left": days_left,
         }
     }

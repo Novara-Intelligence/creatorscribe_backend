@@ -57,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'ninja.compatibility.files.fix_request_files_middleware',
 ]
 
 ROOT_URLCONF = 'creatorscribe.urls'
@@ -169,7 +170,9 @@ NINJA_JWT = {
 # CORS Configuration for Next.js
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js default development port
+    "https://localhost:3000",  # Next.js default development port
     "http://127.0.0.1:3000",
+    "https://127.0.0.1:3000",
     "http://localhost:3001",  # Alternative Next.js port
     "http://192.168.1.3:3000",
 ]

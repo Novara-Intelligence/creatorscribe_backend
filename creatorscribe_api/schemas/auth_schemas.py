@@ -100,6 +100,8 @@ class ProfileDataSchema(Schema):
     full_name: Optional[str] = None
     current_plan: str
     days_left: Optional[int] = None
+    total_tokens: Optional[int] = None   # None for premium (unlimited)
+    remaining_tokens: Optional[int] = None  # None for premium (unlimited)
 
 
 class ProfileResponseSchema(Schema):
