@@ -56,12 +56,8 @@ class CustomUserManager(BaseUserManager):
             
             # Create "Self as Client" for superuser
             Client.objects.create(
-                user=user,
+                owner=user,
                 client_name=user.full_name,
-                contact_person=user.full_name,
-                contact_email=user.email,
-                contact_phone=user.phone_number if user.phone_number else '',
-                industry_type='other'
             )
         
         return user

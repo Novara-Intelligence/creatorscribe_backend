@@ -1,6 +1,5 @@
 from ninja import NinjaAPI, File, Form
 from ninja.files import UploadedFile
-from ninja.security import HttpBearer
 from ninja_jwt.tokens import AccessToken
 from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
@@ -8,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from ninja_jwt.tokens import RefreshToken
 from typing import Optional
+from ..authentication import AuthBearer
 from ..schemas import (
     RegistrationRequestSchema,
     RegistrationResponseSchema,
@@ -34,15 +34,6 @@ from ..models.client_models import Client
 from ..services.email_service import EmailService
 
 User = get_user_model()
-
-
-class AuthBearer(HttpBearer):
-    def authenticate(self, request, token):
-        try:
-            access_token = AccessToken(token)
-            return User.objects.get(id=access_token['user_id'])
-        except Exception:
-            return None
 
 
 # Initialize Django Ninja API for authentication

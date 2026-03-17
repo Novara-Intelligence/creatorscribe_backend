@@ -2,8 +2,7 @@ import json
 from typing import Optional, List
 from ninja import Router, File, Form
 from ninja.files import UploadedFile
-from ninja.security import HttpBearer
-from ninja_jwt.tokens import AccessToken
+from ninja import Router
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from ..models.client_models import Client, ClientMember
@@ -13,29 +12,26 @@ from ..schemas import (
     ClientListResponseSchema,
     ClientCreateResponseSchema,
 )
+from ..authentication import AuthBearer
 
 User = get_user_model()
-
-
-class AuthBearer(HttpBearer):
-    def authenticate(self, request, token):
-        try:
-            access_token = AccessToken(token)
-            return User.objects.get(id=access_token['user_id'])
-        except Exception as e:
-            print(f"[AuthBearer] Token validation failed: {type(e).__name__}: {e}")
-            return None
 
 
 client_router = Router(tags=["Clients"])
 
 
 def _serialize(client: Client, user, request) -> dict:
+    social_accounts = [
+        sa.platform
+        for sa in client.social_accounts.all()
+    ]
+    
     return {
         "id": client.id,
         "client_name": client.client_name,
         "brand_logo": request.build_absolute_uri(client.brand_logo.url) if client.brand_logo else None,
         "role": client.get_user_role(user),
+        "social_accounts": social_accounts,
         "created_at": client.created_at,
         "updated_at": client.updated_at,
     }
