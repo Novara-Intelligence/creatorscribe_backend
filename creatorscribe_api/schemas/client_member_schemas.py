@@ -17,6 +17,7 @@ class MemberResponseSchema(Schema):
     user_id: int
     email: str
     full_name: Optional[str] = None
+    profile_pic: Optional[str] = None
     role: str
     status: str
     invited_by_email: Optional[str] = None

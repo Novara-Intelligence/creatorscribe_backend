@@ -28,11 +28,11 @@ class AuthBearer(HttpBearer):
 client_router = Router(tags=["Clients"])
 
 
-def _serialize(client: Client, user) -> dict:
+def _serialize(client: Client, user, request) -> dict:
     return {
         "id": client.id,
         "client_name": client.client_name,
-        "brand_logo": client.brand_logo.url if client.brand_logo else None,
+        "brand_logo": request.build_absolute_uri(client.brand_logo.url) if client.brand_logo else None,
         "role": client.get_user_role(user),
         "created_at": client.created_at,
         "updated_at": client.updated_at,
@@ -70,7 +70,7 @@ def get_user_clients(request):
     return 200, {
         "success": True,
         "message": "Clients retrieved successfully",
-        "data": [_serialize(c, user) for c in clients],
+        "data": [_serialize(c, user, request) for c in clients],
         "count": clients.count(),
     }
 
@@ -90,7 +90,7 @@ def get_client_detail(request, client_id: int):
     if not client:
         return 404, {"success": False, "message": f"No client found with ID {client_id}"}
 
-    return 200, _serialize(client, user)
+    return 200, _serialize(client, user, request)
 
 
 @client_router.post(
@@ -133,7 +133,7 @@ def add_client(request, payload: ClientCreateRequestSchema):
         return 201, {
             "success": True,
             "message": f"Client '{client.client_name}' created successfully",
-            "data": _serialize(client, user),
+            "data": _serialize(client, user, request),
         }
 
     except Exception as e:

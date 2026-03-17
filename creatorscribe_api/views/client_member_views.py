@@ -1,7 +1,9 @@
 from ninja import Router
 from ninja.security import HttpBearer
 from ninja_jwt.tokens import AccessToken
+from typing import Optional
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from ..models.client_models import Client, ClientMember
 from ..schemas.auth_schemas import ErrorResponseSchema
 from ..schemas.client_member_schemas import (
@@ -48,12 +50,16 @@ def _get_managed_client(client_id: int, user):
     return client, role
 
 
-def _serialize_member(m: ClientMember) -> dict:
+def _serialize_member(m: ClientMember, request) -> dict:
+    profile_pic = None
+    if m.user.profile_pic:
+        profile_pic = request.build_absolute_uri(m.user.profile_pic.url)
     return {
         "id": m.id,
         "user_id": m.user_id,
         "email": m.user.email,
         "full_name": m.user.full_name,
+        "profile_pic": profile_pic,
         "role": m.role,
         "status": m.status,
         "invited_by_email": m.invited_by.email if m.invited_by else None,
@@ -68,7 +74,7 @@ def _serialize_member(m: ClientMember) -> dict:
     auth=AuthBearer(),
     summary="List all members of a client",
 )
-def list_members(request, client_id: int):
+def list_members(request, client_id: int, search: Optional[str] = None):
     user = request.auth
     if not user:
         return 401, {"success": False, "message": "Authentication required"}
@@ -83,10 +89,15 @@ def list_members(request, client_id: int):
 
     members = client.members.select_related('user', 'invited_by').order_by('created_at')
 
+    if search:
+        members = members.filter(
+            Q(user__email__icontains=search) | Q(user__full_name__icontains=search)
+        )
+
     return 200, {
         "success": True,
         "message": "Members retrieved successfully",
-        "data": [_serialize_member(m) for m in members],
+        "data": [_serialize_member(m, request) for m in members],
         "count": members.count(),
     }
 
@@ -137,7 +148,7 @@ def invite_member(request, client_id: int, payload: InviteMemberSchema):
     return 201, {
         "success": True,
         "message": f"Invite sent to {invitee.email}",
-        "data": _serialize_member(member),
+        "data": _serialize_member(member, request),
     }
 
 
@@ -167,7 +178,7 @@ def accept_invite(request, client_id: int):
     return 200, {
         "success": True,
         "message": f"You have joined '{member.client.client_name}' as {member.role}",
-        "data": _serialize_member(member),
+        "data": _serialize_member(member, request),
     }
 
 
@@ -197,7 +208,7 @@ def update_member_role(request, client_id: int, member_id: int, payload: UpdateM
     return 200, {
         "success": True,
         "message": f"Role updated to '{payload.role}'",
-        "data": _serialize_member(member),
+        "data": _serialize_member(member, request),
     }
 
 
