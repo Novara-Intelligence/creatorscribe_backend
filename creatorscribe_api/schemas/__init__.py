@@ -33,6 +33,7 @@ from .social_account_schemas import (
     SocialAccountListResponseSchema,
     SocialAccountDetailResponseSchema,
 )
+from .upload_schemas import UploadedFileOut, UploadedFileResponseSchema, UploadedFileListResponseSchema
 
 __all__ = [
     # Auth
@@ -65,4 +66,6 @@ __all__ = [
     'SocialAccountResponseSchema',
     'SocialAccountListResponseSchema',
     'SocialAccountDetailResponseSchema',
+    # Uploads
+    'UploadedFileOut',
 ]

@@ -28,10 +28,12 @@ api = NinjaAPI(title="CreatorScribe API", version="1.0.0")
 from creatorscribe_api.views.client_views import client_router
 from creatorscribe_api.views.social_account_views import social_router
 from creatorscribe_api.views.client_member_views import member_router
+from creatorscribe_api.views.upload_views import upload_router
 
 api.add_router("/clients", client_router)
 api.add_router("/clients", social_router)
 api.add_router("/clients", member_router)
+api.add_router("/uploads", upload_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

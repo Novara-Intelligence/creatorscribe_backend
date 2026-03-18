@@ -281,8 +281,8 @@ def remove_member(request, client_id: int, member_id: int):
     return 200, {"success": True, "message": f"{email} has been removed from this client"}
 
 
-@member_router.delete(
-    "/{client_id}/members/leave",
+@member_router.post(
+    "/{client_id}/leave",
     response={200: ErrorResponseSchema, 401: ErrorResponseSchema, 404: ErrorResponseSchema},
     auth=AuthBearer(),
     summary="Leave a client you are a member of",

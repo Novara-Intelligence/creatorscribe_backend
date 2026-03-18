@@ -153,3 +153,80 @@ def add_client(
 
     except Exception as e:
         return 400, {"success": False, "message": f"Failed to create client: {str(e)}"}
+
+
+@client_router.patch(
+    "/{client_id}/edit",
+    response={200: ClientCreateResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Edit client name and/or brand logo (multipart/form-data)",
+)
+def edit_client(
+    request,
+    client_id: int,
+    client_name: Form[Optional[str]] = None,
+    brand_logo: File[Optional[UploadedFile]] = None,
+):
+    user = request.auth
+    if not user:
+        return 401, {"success": False, "message": "Authentication required"}
+
+    try:
+        client = Client.objects.get(id=client_id)
+    except Client.DoesNotExist:
+        return 404, {"success": False, "message": f"No client found with ID {client_id}"}
+
+    if client.owner != user:
+        return 403, {"success": False, "message": "Only the client owner can edit this client"}
+
+    try:
+        if brand_logo:
+            allowed_types = ('image/jpeg', 'image/png', 'image/gif', 'image/webp')
+            if brand_logo.content_type not in allowed_types:
+                return 400, {"success": False, "message": "Invalid image type. Allowed: jpeg, png, gif, webp"}
+
+        update_fields = []
+        if client_name is not None:
+            client.client_name = client_name
+            update_fields.append('client_name')
+        if brand_logo is not None:
+            client.brand_logo = brand_logo
+            update_fields.append('brand_logo')
+
+        if update_fields:
+            update_fields.append('updated_at')
+            client.save(update_fields=update_fields)
+
+        return 200, {
+            "success": True,
+            "message": "Client updated successfully",
+            "data": _serialize(client, user, request),
+        }
+
+    except Exception as e:
+        return 400, {"success": False, "message": f"Failed to update client: {str(e)}"}
+
+
+@client_router.delete(
+    "/{client_id}/delete",
+    response={200: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema},
+    auth=AuthBearer(),
+    summary="Delete a client (owner only)",
+)
+def delete_client(request, client_id: int):
+    user = request.auth
+    if not user:
+        return 401, {"success": False, "message": "Authentication required"}
+
+    try:
+        client = Client.objects.get(id=client_id)
+    except Client.DoesNotExist:
+        return 404, {"success": False, "message": f"No client found with ID {client_id}"}
+
+    if client.owner != user:
+        return 403, {"success": False, "message": "Only the client owner can delete this client"}
+
+    name = client.client_name
+    client.delete()
+
+    return 200, {"success": True, "message": f"Client '{name}' deleted successfully"}

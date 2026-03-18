@@ -14,6 +14,10 @@ from .social_account_admin import (
     SocialAccountAdmin,
     DefaultSocialAccountAdmin,
 )
+from .upload_admin import (
+    UploadedFileAdmin,
+    DefaultUploadedFileAdmin,
+)
 
 __all__ = [
     'admin_site',
@@ -26,4 +30,6 @@ __all__ = [
     'DefaultClientAdmin',
     'SocialAccountAdmin',
     'DefaultSocialAccountAdmin',
+    'UploadedFileAdmin',
+    'DefaultUploadedFileAdmin',
 ]
