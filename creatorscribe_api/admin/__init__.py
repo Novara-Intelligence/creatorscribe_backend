@@ -18,6 +18,18 @@ from .upload_admin import (
     UploadedFileAdmin,
     DefaultUploadedFileAdmin,
 )
+from .caption_admin import (
+    CaptionSessionAdmin,
+    DefaultCaptionSessionAdmin,
+    CaptionJobAdmin,
+    DefaultCaptionJobAdmin,
+    AudioOutputAdmin,
+    DefaultAudioOutputAdmin,
+    TranscriptionOutputAdmin,
+    DefaultTranscriptionOutputAdmin,
+    CaptionOutputAdmin,
+    DefaultCaptionOutputAdmin,
+)
 
 __all__ = [
     'admin_site',
@@ -32,4 +44,14 @@ __all__ = [
     'DefaultSocialAccountAdmin',
     'UploadedFileAdmin',
     'DefaultUploadedFileAdmin',
+    'CaptionSessionAdmin',
+    'DefaultCaptionSessionAdmin',
+    'CaptionJobAdmin',
+    'DefaultCaptionJobAdmin',
+    'AudioOutputAdmin',
+    'DefaultAudioOutputAdmin',
+    'TranscriptionOutputAdmin',
+    'DefaultTranscriptionOutputAdmin',
+    'CaptionOutputAdmin',
+    'DefaultCaptionOutputAdmin',
 ]
