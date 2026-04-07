@@ -7,7 +7,11 @@ from creatorscribe_api.utils.pagination import PaginationMeta
 
 class CreateSessionIn(Schema):
     client_id: int
-    title: str = ""
+    title: str = "New Session"
+
+
+class RenameSessionIn(Schema):
+    title: str
 
 
 class LastCaptionOut(Schema):
