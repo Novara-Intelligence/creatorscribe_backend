@@ -30,16 +30,20 @@ from creatorscribe_api.views.social_account_views import social_router
 from creatorscribe_api.views.client_member_views import member_router
 from creatorscribe_api.views.upload_views import upload_router
 from creatorscribe_api.views.caption_session_views import caption_session_router
+from creatorscribe_api.views.caption_job_views import caption_job_router, stream_job
 
 api.add_router("/clients", client_router)
 api.add_router("/clients", social_router)
 api.add_router("/clients", member_router)
 api.add_router("/uploads", upload_router)
 api.add_router("/caption-studio/sessions", caption_session_router)
+api.add_router("/caption-studio/jobs", caption_job_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/auth/', auth_api.urls),
+    # SSE stream — must come BEFORE api.urls so Ninja doesn't intercept it
+    path('api/v1/caption-studio/jobs/<uuid:job_id>/stream/', stream_job),
     path('api/v1/', api.urls),
 ]
 

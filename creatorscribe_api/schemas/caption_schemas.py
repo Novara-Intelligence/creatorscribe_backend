@@ -5,6 +5,12 @@ from typing import Optional
 from creatorscribe_api.utils.pagination import PaginationMeta
 
 
+class SubmitJobIn(Schema):
+    session_id: UUID
+    file_id: Optional[int] = None
+    prompt: str = ""
+
+
 class CreateSessionIn(Schema):
     client_id: int
     title: str = "New Session"

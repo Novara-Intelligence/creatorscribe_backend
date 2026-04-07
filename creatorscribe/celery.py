@@ -18,6 +18,11 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
+# Explicitly register task modules not at app root level
+app.conf.imports = [
+    'creatorscribe_api.tasks.caption_tasks',
+]
+
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
