@@ -10,6 +10,7 @@ class CaptionSession(models.Model):
     client     = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='caption_sessions')
     user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='caption_sessions')
     title      = models.CharField(max_length=255, blank=True)
+    thumbnail  = models.ImageField(upload_to='thumbnails/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

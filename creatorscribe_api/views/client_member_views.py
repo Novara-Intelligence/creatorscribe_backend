@@ -120,7 +120,7 @@ def invite_member(request, client_id: int, payload: InviteMemberSchema):
         except User.DoesNotExist:
             continue
 
-        if invitee == client.owner:
+        if invitee == client.owner or invitee == user:
             continue
 
         member, created = ClientMember.objects.get_or_create(

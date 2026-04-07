@@ -101,13 +101,6 @@ def register_user(request, data: RegistrationRequestSchema):
 @auth_api.post("/verify-registration", response={200: TokenResponseSchema, 400: ErrorResponseSchema})
 def verify_registration_otp(request, data: RegistrationVerificationRequestSchema):
     try:
-        # Debug prints
-        print("---- VERIFY REGISTRATION DEBUG ----")
-        print("Raw request body:", request.body)
-        print("Parsed data:", data)
-        print("Email:", data.email)
-        print("OTP:", data.otp_code)
-
         # Check if user exists
         try:
             user = User.objects.get(email=data.email)
@@ -133,19 +126,16 @@ def verify_registration_otp(request, data: RegistrationVerificationRequestSchema
             user.is_verified = True
             user.last_login = timezone.now()
             user.save(update_fields=['is_verified', 'last_login'])
-            print("User marked as verified")
 
             client = Client.objects.create(
                 owner=user,
-                client_name=user.username,
+                client_name="My Workspace",
             )
-            print("Client created:", client.id)
 
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
 
-        print("Tokens generated")
 
         return 200, {
             "success": True,
@@ -413,7 +403,7 @@ def oauth_signin(request, data: OAuthSigninRequestSchema):
                 # Create "Self as Client" automatically for new OAuth users
                 Client.objects.create(
                     owner=user,
-                    client_name=user.username,
+                    client_name="My Workspace",
                 )
                 
                 # Update profile picture if provided
@@ -487,6 +477,8 @@ def check_user_by_email(request, email: str, client_id: int = None):
     except User.DoesNotExist:
         return 200, {"success": True, "found": False, "message": "No user found with this email"}
 
+    is_self = found_user.id == request.auth.id
+
     profile_pic = None
     if found_user.profile_pic:
         profile_pic = request.build_absolute_uri(found_user.profile_pic.url)
@@ -495,14 +487,20 @@ def check_user_by_email(request, email: str, client_id: int = None):
     if client_id is not None:
         try:
             client = Client.objects.get(id=client_id)
-            already_in_client = client.is_member(found_user)
+            is_owner = client.owner_id == found_user.id
+            is_member_or_invited = client.members.filter(
+                user=found_user, status__in=['accepted', 'pending']
+            ).exists()
+            already_in_client = is_self or is_owner or is_member_or_invited
         except Client.DoesNotExist:
-            pass
+            already_in_client = is_self
+    else:
+        already_in_client = is_self
 
     return 200, {
         "success": True,
         "found": True,
-        "message": "Already in client" if already_in_client else "User found",
+        "message": "Cannot invite yourself" if is_self else ("Already in client" if already_in_client else "User found"),
         "email": found_user.email,
         "full_name": found_user.full_name,
         "profile_pic": profile_pic,
