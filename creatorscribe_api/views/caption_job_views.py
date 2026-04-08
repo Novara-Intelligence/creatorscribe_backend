@@ -39,10 +39,16 @@ def submit_job(request, payload: SubmitJobIn):
 
     uploaded_file = None
     if payload.file_id:
+        # New file explicitly provided — use it
         try:
             uploaded_file = UploadedFile.objects.get(id=payload.file_id, client=session.client)
         except UploadedFile.DoesNotExist:
             return 404, {"success": False, "message": "Uploaded file not found"}
+    else:
+        # No file provided — inherit from the most recent job in this session
+        prev_job = session.jobs.filter(uploaded_file__isnull=False).order_by("-turn_index").first()
+        if prev_job:
+            uploaded_file = prev_job.uploaded_file
 
     turn_index = session.jobs.count()
 
