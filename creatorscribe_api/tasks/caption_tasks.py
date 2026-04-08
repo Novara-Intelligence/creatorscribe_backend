@@ -233,8 +233,8 @@ def _generate_caption(job: CaptionJob, job_id: str, caption: dict):
 # Pipeline task
 # ---------------------------------------------------------------------------
 
-@shared_task(bind=True, max_retries=0)
-def run_caption_pipeline(self, job_id: str):
+@shared_task
+def run_caption_pipeline(job_id: str):
     try:
         job = CaptionJob.objects.select_related("uploaded_file", "session").get(id=job_id)
     except CaptionJob.DoesNotExist:

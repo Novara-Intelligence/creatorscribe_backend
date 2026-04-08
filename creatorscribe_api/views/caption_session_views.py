@@ -1,7 +1,7 @@
 from ninja import Router
 from ..models.caption_models import CaptionSession, CaptionOutput
 from ..models.client_models import Client
-from ..schemas.caption_schemas import CreateSessionIn, RenameSessionIn, SessionResponseSchema, SessionListResponseSchema
+from ..schemas.caption_schemas import CreateSessionIn, RenameSessionIn, SessionResponseSchema, SessionListResponseSchema, JobListResponseSchema
 from ..authentication import AuthBearer
 from ..utils.pagination import paginate
 
@@ -156,3 +156,114 @@ def delete_session(request, session_id):
     session.delete()
 
     return 200, {"success": True, "message": "Session deleted successfully"}
+
+
+@caption_session_router.get(
+    "/{session_id}/",
+    response={200: SessionResponseSchema, 403: dict, 404: dict},
+    auth=AuthBearer(),
+    summary="Get a single Caption Studio session",
+)
+def get_session(request, session_id):
+    user = request.auth
+
+    try:
+        session = CaptionSession.objects.get(id=session_id)
+    except CaptionSession.DoesNotExist:
+        return 404, {"success": False, "message": "Session not found"}
+
+    if not session.client.is_member(user):
+        return 403, {"success": False, "message": "You are not a member of this client"}
+
+    return 200, {
+        "success": True,
+        "message": "Session retrieved successfully",
+        "data": _serialize_session(session, request),
+    }
+
+
+@caption_session_router.get(
+    "/{session_id}/jobs/",
+    response={200: JobListResponseSchema, 403: dict, 404: dict},
+    auth=AuthBearer(),
+    summary="Get all jobs for a session with full output data",
+)
+def get_session_jobs(request, session_id):
+    from ..tasks.caption_tasks import _segments_to_srt
+
+    user = request.auth
+
+    try:
+        session = CaptionSession.objects.get(id=session_id)
+    except CaptionSession.DoesNotExist:
+        return 404, {"success": False, "message": "Session not found"}
+
+    if not session.client.is_member(user):
+        return 403, {"success": False, "message": "You are not a member of this client"}
+
+    jobs = (
+        session.jobs
+        .select_related("audio", "transcription", "caption", "uploaded_file")
+        .prefetch_related("transcription__segments")
+        .order_by("turn_index")
+    )
+
+    data = []
+    for job in jobs:
+        uploaded_file = None
+        if job.uploaded_file_id:
+            f = job.uploaded_file
+            uploaded_file = {
+                "id": f.id,
+                "original_name": f.original_name,
+                "file_url": request.build_absolute_uri(f.file.url),
+                "file_type": f.file_type,
+                "size": f.size,
+            }
+
+        audio = None
+        if hasattr(job, "audio"):
+            audio = {
+                "audio_url": request.build_absolute_uri(job.audio.file.url) if job.audio.file else None,
+                "duration": job.audio.duration,
+                "language": job.audio.language,
+            }
+
+        transcription = None
+        if hasattr(job, "transcription"):
+            segments = [
+                {"text": s.text, "startSecond": s.start_second, "endSecond": s.end_second}
+                for s in job.transcription.segments.all()
+            ]
+            transcription = {
+                "full_text": job.transcription.full_text,
+                "srt": _segments_to_srt(segments),
+                "segments": segments,
+            }
+
+        caption = None
+        if hasattr(job, "caption"):
+            caption = {
+                "title": job.caption.title,
+                "description": job.caption.description,
+                "tags": job.caption.tags,
+            }
+
+        data.append({
+            "id": job.id,
+            "turn_index": job.turn_index,
+            "status": job.status,
+            "media_type": job.media_type,
+            "prompt": job.prompt,
+            "created_at": job.created_at,
+            "uploaded_file": uploaded_file,
+            "audio": audio,
+            "transcription": transcription,
+            "caption": caption,
+        })
+
+    return 200, {
+        "success": True,
+        "message": "Jobs retrieved successfully",
+        "data": data,
+    }
