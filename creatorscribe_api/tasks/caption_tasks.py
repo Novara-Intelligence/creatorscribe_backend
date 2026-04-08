@@ -206,7 +206,6 @@ def run_caption_pipeline(self, job_id: str):
 
         job.status = CaptionJob.Status.DONE
         job.save(update_fields=["status", "updated_at"])
-        _publish(job_id, "done")
 
     except Exception as exc:
         job.status = CaptionJob.Status.FAILED

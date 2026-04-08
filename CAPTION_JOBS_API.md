@@ -96,7 +96,7 @@ data: {
 ```
 
 ### `caption_ready`
-Title, description and tags generated from the transcription.
+Title, description and tags generated from the transcription. **This is the final event — the connection closes after this.**
 
 ```json
 data: {
@@ -107,22 +107,16 @@ data: {
     "tags": ["#GoldenHour", "#CinematicVibes", "#NaturePhotography", "#SunsetMoment", "#VisualStorytelling"]
   }
 }
-```
-
-### `done`
-Pipeline complete. Close the connection.
-
-```json
-data: { "type": "done" }
 ```
 
 ---
 
 ## Image Pipeline
 
-Images skip audio extraction and transcription — only `caption_ready` is emitted before `done`.
+Images skip audio extraction and transcription — `caption_ready` is the only event emitted.
 
 ### `caption_ready`
+**Final event — the connection closes after this.**
 
 ```json
 data: {
@@ -133,12 +127,6 @@ data: {
     "tags": ["#GoldenHour", "#CinematicVibes", "#NaturePhotography", "#SunsetMoment", "#VisualStorytelling"]
   }
 }
-```
-
-### `done`
-
-```json
-data: { "type": "done" }
 ```
 
 ---
@@ -162,8 +150,7 @@ data: {
 |---|---|---|
 | `audio_ready` | ✅ | ❌ |
 | `transcription_ready` | ✅ | ❌ |
-| `caption_ready` | ✅ | ✅ |
-| `done` | ✅ | ✅ |
+| `caption_ready` _(final)_ | ✅ | ✅ |
 | `error` | ✅ | ✅ |
 
 ---

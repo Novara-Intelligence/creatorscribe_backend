@@ -126,7 +126,6 @@ def stream_job(request, job_id):
             })
 
         if job.status == CaptionJob.Status.DONE:
-            yield _sse("done")
             replayed_final = True
         elif job.status == CaptionJob.Status.FAILED:
             yield _sse("error", {"message": job.error_message})
@@ -152,7 +151,7 @@ def stream_job(request, job_id):
                 yield f"data: {raw}\n\n"
 
                 try:
-                    if json.loads(raw).get("type") in ("done", "error"):
+                    if json.loads(raw).get("type") in ("caption_ready", "error"):
                         break
                 except (json.JSONDecodeError, AttributeError):
                     break
