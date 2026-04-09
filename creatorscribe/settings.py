@@ -224,6 +224,9 @@ EMAIL_SSL_KEYFILE = None
 EMAIL_USE_SSL = False
 EMAIL_USE_TLS = True
 
+# OpenAI
+OPENAI_API_KEY = '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'
+
 # Celery Configuration
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'

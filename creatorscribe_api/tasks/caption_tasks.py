@@ -6,6 +6,7 @@ from celery import shared_task
 from django.conf import settings
 
 from ..utils.extract_audio import extract_audio_from_video
+from ..utils.transcribe_audio import transcribe_audio
 from ..models.caption_models import (
     CaptionJob,
     AudioOutput,
@@ -155,7 +156,7 @@ def _pipeline_video(job: CaptionJob, job_id: str):
 
     audio_content, duration, filename = result
 
-    audio_output = AudioOutput(job=job, duration=duration, language="en")
+    audio_output = AudioOutput(job=job, duration=duration, language="")
     audio_output.file.save(filename, audio_content, save=True)
 
     _publish(job_id, "audio_ready", {
@@ -164,18 +165,26 @@ def _pipeline_video(job: CaptionJob, job_id: str):
         "language": audio_output.language,
     })
 
-    time.sleep(5)
-
     # Stage 2 — Transcribe
     job.status = CaptionJob.Status.TRANSCRIBING
     job.save(update_fields=["status", "updated_at"])
 
-    segments, full_text, caption = _random_mock()
+    result = transcribe_audio(audio_output.file.path)
+    if result is None:
+        raise RuntimeError("Whisper transcription failed")
+
+    segments   = result["segments"]
+    full_text  = result["full_text"]
+    language   = result["language"]
+
+    # Back-fill language on AudioOutput now that Whisper has detected it
+    audio_output.language = language
+    audio_output.save(update_fields=["language"])
 
     transcription = TranscriptionOutput.objects.create(
         job=job,
         full_text=full_text,
-        language="en",
+        language=language,
     )
 
     TranscriptionSegment.objects.bulk_create([
@@ -195,9 +204,8 @@ def _pipeline_video(job: CaptionJob, job_id: str):
         "segments": segments,
     })
 
-    time.sleep(5)
-
-    # Stage 3 — Caption
+    # Stage 3 — Caption (still mock for now)
+    _, _, caption = _random_mock()
     _generate_caption(job, job_id, caption)
 
 
