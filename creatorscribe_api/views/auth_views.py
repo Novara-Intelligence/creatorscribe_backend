@@ -617,3 +617,11 @@ def edit_profile(
             "days_left": days_left,
         }
     }
+
+
+@auth_api.delete("/delete-account", auth=AuthBearer(), response={200: dict, 400: ErrorResponseSchema})
+def delete_account(request):
+    user = request.auth
+    with transaction.atomic():
+        user.delete()
+    return 200, {"success": True, "message": "Account deleted successfully"}
