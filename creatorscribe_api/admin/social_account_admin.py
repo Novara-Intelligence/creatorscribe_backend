@@ -27,7 +27,7 @@ class SocialAccountAdmin(admin.ModelAdmin):
     search_fields = (
         'account_name',
         'client__client_name',
-        'client__user__email',
+        'client__owner__email',
     )
 
     ordering = ('client', 'platform')
@@ -63,7 +63,7 @@ class SocialAccountAdmin(admin.ModelAdmin):
     token_status.short_description = 'Token Status'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('client', 'client__user')
+        return super().get_queryset(request).select_related('client', 'client__owner')
 
     def has_add_permission(self, request):
         return False
